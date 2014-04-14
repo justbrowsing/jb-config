@@ -1,0 +1,556 @@
+#!/bin/bash
+#####################
+### jb-settings #####
+version="0.1" #######
+### JustBrowsing ####
+#####################
+
+workDir=$(dirname $(readlink  -e "$0"));
+
+############################################################################################
+
+DeviceIDs=$(lpinfo --include-schemes=usb -v 2>/dev/null | grep "^direct " | awk '{print $2}');
+USB=$(echo "$DeviceIDs" | awk -F "?" '{print $1}' | sed -e 's/^usb:\/\///' -e 's/\//|/' -e 's/%20/ /g');
+Brand=$(echo "$USB" | awk -F "|" '{print $1}');
+ShortName=$(echo "$USB" | awk -F "|" '{print $2}');
+defaultBrand=$(echo "$Brand" | awk NR==1);
+[ -z "$defaultBrand" ] && defaultBrand="(none)";
+PPDs=$(grep "<printer " /usr/share/gutenprint/*/xml/printers.xml | sort | grep -o -e "<printer " -e 'name=[^=]*"' -e 'manufacturer=[^=]*"' -e 'driver=[^=]*"' | sed -e 's/name="/|/g' -e 's/driver="/|/g' -e 's/manufacturer="/|/g');
+Models=$(echo $PPDs | sed -e 's/<printer |/\n/g' -e 's/" |/|/g' -e 's/" //g' -e 's/"//g' | awk -F "|" '{print $3"|"$1"|"$2}');
+OEMs=$(echo "$Models" | awk -F "|" '{print $1}' | sort -u | sed -e 's/^$/(none)/g');
+printRow=$(echo "$Models" | grep "^${defaultBrand}" | awk -F "|" '{print $2}' | grep -n "${ShortName}" | awk -F ":" '{print $1-1}');
+export DeviceIDs USB Brand ShortName DefaultBrand PPDs Models OEMs printRow
+
+localPrinters() {
+  if [ -z "$Brand" -o -z "$ShortName" ]; then
+    echo "(No USB printers detected)"
+  else
+    echo "$Brand $ShortName" | nl -n ln | sed 's/^/Printer#/';
+  fi
+}
+
+allPrinters() { 
+  if [ -z "$1" ]; then
+    echo "$Models" | grep "^${defaultBrand}" | awk -F "|" '{print $1"|"$2"|"$2"|"$3}'
+  elif [ "$1" = "OEM" ]; then
+    echo "$OEMs"
+  else
+    echo "$Models" | grep ^"$1" | awk -F "|" '{print $1"|"$2"|"$2"|"$3}'
+  fi
+}
+
+installPrinter() {
+echo "$@"
+  Driver=$(find /usr/share/cups/ -name "*$1*ppd*");
+  shift;
+  LineInt=$(echo "$1" | sed -e 's/Printer#//' -e 's/ //g');
+  Interface=$(echo "$DeviceIDs" | awk -v line=$LineInt NR==line);
+  shift;
+  printName=$(echo "$@" | sed 's/ /_/g');
+  delPrinter "$printName"
+  lpadmin -p "$printName" -E -v "$Interface" -P "$Driver"
+  cupsenable "$printName"
+  lpoptions -d "$printName"
+  echo "Added Printer: $printName @ $Interface ($Driver)"
+}
+
+export -f localPrinters allPrinters installPrinter
+
+printerTree() {
+  echo '
+    <comboboxtext>
+      <variable>'$1'</variable>
+      <input>bash -c "localPrinters 2>/dev/null"</input>
+      <action>echo LocalPrinter: $'$1'</action>
+      <action function="refresh">'$1'</action>
+    </comboboxtext>
+    <tree selection-mode="2" stock-id="gtk-print" selected-row="'$printRow'" column-visible="false|true|true|true" exported-column="2" rules-hint="true">
+      <variable>'$2'</variable>
+      <label>Brand|Model|Driver</label>
+      <height>'$4'</height>
+      <width>'$5'</width>
+      <input icon-column="1">bash -c "allPrinters $'$3' 2>/dev/null"</input>
+      <action>echo PrinterModel: $'$2'</action>
+    </tree>
+    <hbox>
+      <button use-stock="true" label="gtk-apply">
+        <action>bash -c "installPrinter $'$2' $'$1'"</action>
+        <action function="refresh">SavedPrinters</action>
+      </button>
+      <text><label>Printer brand:</label></text>
+      <comboboxtext space-expand="true" space-fill="true">
+        <variable>'$3'</variable>
+        <default>'$defaultBrand'</default>
+        <input>bash -c "allPrinters OEM 2>/dev/null"</input>
+        <action>echo PrinterOEM: $'$3'</action>
+        <action function="refresh">'$2'</action>
+      </comboboxtext>
+    </hbox>'
+}
+
+getPrinters() {
+  myPrinters=$(lpstat -s 2>/dev/null | grep "^device " | awk -F ":" '{print $1}' | awk '{print $3}');
+  favPrinter=$(lpstat -s 2>/dev/null | grep "^system " | awk -F ": " '{print $2}');
+  printLine=$(echo "$myPrinters" | grep -n "$favPrinter" | awk -F ":" '{print $1}');
+  if [ -z "$myPrinters" ]; then
+    treePrint="(none installed)"
+  else
+    treePrint=$(echo "$myPrinters" | sed "${printLine}s/$/ */");
+  fi
+  echo "$treePrint"
+}
+
+setPrinter() {
+  echo "$1"
+  echo "$2"
+  lpoptions -d "$1"
+  echo "Set default printer: $1"
+}
+
+delPrinter() {
+  lprm -
+  cupsreject "$1"
+  cupsdisable "$1"
+  lpadmin -x "$1"
+  echo "Removed printer: $1"
+}
+
+export -f getPrinters setPrinter delPrinter
+
+knownPrinterTree() {
+  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$2'" rules-hint="true">
+      <variable>'$1'</variable>
+      <label>Installed Printers</label>
+      <height>'$4'</height>
+      <width>'$5'</width>
+      <input>bash -c "getPrinters 2>/dev/null"</input>
+    </tree>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-home">
+        <action>bash -c "setPrinter $'$1' 2>/dev/null"</action>
+        <action function="refresh">'$1'</action>
+      </button>
+      <button use-stock="true" label="gtk-delete">
+        <action>bash -c "delPrinter $'$1' 2>/dev/null"</action>
+        <action function="refresh">'$1'</action>
+      </button>
+    </hbox>'
+}
+
+############################################################################################
+
+netDel="/dev/shm/.nm-blacklist"
+netSaved="/etc/NetworkManager/system-connections/"
+export netDel netSaved
+
+listNetworks() {
+  if [ -f "$netDel" -a -d "$netSaved" ]; then
+    diff -y --suppress-common-lines <(ls --color=none "$netSaved") <(cat "$netDel" | sort) | awk -F "\t" '{print $1}'
+  else
+    ls --color=none "$netSaved"
+  fi
+}
+
+delNetwork() {
+  echo "$1" >> "$netDel"
+}
+
+resetNetworks() {
+  > "$netDel"
+}
+
+export -f listNetworks delNetwork resetNetworks
+
+networkTree() {
+  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$2'" rules-hint="true">
+      <variable>'$1'</variable>
+      <label>Saved Networks</label>
+      <height>'$4'</height>
+      <width>'$5'</width>
+      <input>bash -c "listNetworks" 2>&1</input>
+    </tree>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-remove">
+        <action>bash -c "delNetwork $'$1'"</action>
+        <action function="refresh">'$1'</action>
+      </button>
+      <button use-stock="true" label="gtk-clear">
+        <action>bash -c "resetNetworks"</action>
+        <action function="refresh">'$1'</action>
+      </button>
+    </hbox>'
+}
+
+############################################################################################
+
+menuBar() {
+  echo '<menubar>
+			<menu label="_File" use-underline="true">
+				<menuitem stock-id="gtk-new">
+					<action>clear</action>
+					<label>New</label>
+                </menuitem>
+				<menuitemseparator></menuitemseparator>
+				<menuitem stock-id="gtk-quit" accel-key="0x51" accel-mods="4">
+					<action>exit:Quit</action>
+					<label>New</label>
+                </menuitem>
+          </menu>
+		</menubar>'
+}
+
+defaultRadio() {
+  echo '<frame>
+          <text><label>Default web browser</label></text>
+            <hbox homogeneous="true">
+			<radiobutton>
+                <label>Firefox</label>
+                <default>true</default>
+			    <variable>Default</variable>
+			    <action>echo</action>
+     		</radiobutton>
+			<radiobutton>
+                <label>Chrome</label>
+			    <variable>Default</variable>
+			    <action>echo</action>
+     		</radiobutton>
+            </hbox>
+        </frame>'
+}
+
+virtualRadio() {
+  echo '<frame>
+          <text><label>Virtual GPU</label></text>
+			<radiobutton>
+                <label>none</label>
+                <default>true</default>
+			    <variable>GPU</variable>
+			    <action>echo</action>
+     		</radiobutton>
+			<radiobutton>
+                <label>Spice/QXL</label>
+			    <variable>GPU</variable>
+			    <action>echo</action>
+     		</radiobutton>
+			<radiobutton>
+                <label>VirtualBox</label>
+			    <variable>GPU</variable>
+			    <action>echo</action>
+     		</radiobutton>
+			<radiobutton>
+                <label>VMware</label>
+			    <variable>GPU</variable>
+			    <action>echo</action>
+     		</radiobutton>
+        </frame>'
+}
+
+checkBoxes() {
+  echo '<frame>
+          <text><label>More options (requires reboot)</label></text>
+			<checkbox>
+                <label>Copy to RAM</label>
+			    <variable>Copy2RAM</variable>
+			    <action>echo</action>
+     		</checkbox>
+			<checkbox>
+                <label>Enable zRAM</label>
+			    <variable>zRAM</variable>
+			    <action>echo</action>
+     		</checkbox>
+			<checkbox>
+                <label>Enable "clean" profiles</label>
+			    <variable>CleanProfiles</variable>
+			    <action>echo</action>
+     		</checkbox>
+        </frame>'
+}
+
+urlEntry() {
+  echo '<text><label>Homepage</label></text>
+        <comboboxentry>
+          <variable>URL</variable>
+          <default>(none)</default>
+          <item>http://justbrowsing.info</item>
+          <item>https://duckduckgo.com</item>
+        </comboboxentry>'
+}
+
+############################################################################################
+
+displayOut=$(xrandr --current 2>&1 | grep " connected" | awk '{print $1}' | awk NR==1);
+displayState=$(xrandr --current 2>&1 | grep " connected" | awk '{print $3}' | awk -F + '{print $1}');
+displayList=$(xrandr --current 2>&1 | grep "^   " | awk '{print $1}');
+displaySelect=$(grep -n "$displayState" <(echo "$displayList") | awk -F : '{print $1-1}');
+
+displayTree() {
+  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$displaySelect'" rules-hint="true">
+      <variable>'$1'</variable>
+      <label>'$1'</label>
+      <height>'$4'</height>
+      <width>'$5'</width>
+      <input>xrandr 2>/dev/null | grep "^   " | awk '\''{print $1}'\''</input>
+    </tree>
+    <comboboxtext>
+      <variable>'$2'</variable>
+      <item>normal</item>
+      <item>left</item>
+      <item>right</item>
+      <item>inverted</item>
+    </comboboxtext>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo Setting '$4': $'$1'</action>
+        <action>xrandr --output '$displayOut' --mode $'$1' --rotate $'$2'</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo Resetting '$1' '$2'</action>
+        <action function="refresh">'$1'</action>
+        <action function="refresh">'$2'</action>
+        <action>xrandr --output '$displayOut' --mode $'$1' --rotate normal</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+    </hbox>'
+}
+
+############################################################################################
+
+locales=('Afrikaans:af' 'Amharic:am' 'Belarusian:be' 'Breton:br' 'Bulgarian:bg' 'Catalan:ca' 'German:de' 'Greek:gr' 'English (GB):gb' 'English (US):us' 'Spanish:es' 'Estonian:et' 'Finnish:fi' 'French:fr' 'Croatian:hr' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Lithuanian:lt' 'Latvian:lv' 'Macedonian:mk' 'Malaylam:ml' 'Dutch:nl' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Swedish:se' 'Thai:th' 'Turkish:tr' 'Chinese:cn' 'Taiwanese:tw')
+    langName=$(echo ${locales[$index]} | awk -F ":" '{print $1}')
+    langCode=$(echo ${locales[$index]} | awk -F ":" '{print $2}')
+
+localeTree() {
+  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$localeSelect'" rules-hint="true">
+      <variable>'$1'</variable>
+      <label>'$1'</label>
+      <height>'$4'</height>
+      <width>'$5'</width>
+      <input>localectl list-x11-keymap-layouts 2>&1</input>
+    </tree>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo Setting '$4': $'$1'</action>
+        <action>#setkeymap $'$1'</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo Resetting '$4'</action>
+        <action function="refresh">'$1'</action>
+        <action>#setkeymap $'$1'</action>
+      </button>
+    </hbox>'
+}
+
+
+keymapState=$(xkb-switch -p 2>&1);
+keymapList=$(localectl list-x11-keymap-layouts 2>&1);
+keymapSelect=$(grep -n "$keymapState" <(echo "$keymapList") | awk -F : '{print $1-1}');
+
+keymapTree() {
+  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$keymapSelect'" rules-hint="true">
+      <variable>'$1'</variable>
+      <label>'$1'</label>
+      <height>'$4'</height>
+      <width>'$5'</width>
+      <input>localectl list-x11-keymap-layouts 2>&1</input>
+    </tree>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo Setting '$4': $'$1'</action>
+        <action>setkeymap $'$1'</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo Resetting '$4'</action>
+        <action function="refresh">'$1'</action>
+        <action>setkeymap $'$1'</action>
+      </button>
+    </hbox>'
+}
+
+############################################################################################
+printRegion() {
+  input=("${!1}")
+  region=${#input[@]}
+  index=0
+  while [ "$index" -lt "$region" ] 2>/dev/null; do
+    echo "${input[$index]}||${input[$index]}"
+    index=$((index+1))
+  done;
+}
+
+listZones() {
+  Africa=('Accra' 'Addis_Ababa' 'Algiers' 'Asmara' 'Bamako' 'Bangui' 'Banjul' 'Bissau' 'Blantyre' 'Brazzaville' 'Bujumbura' 'Cairo' 'Casablanca' 'Ceuta' 'Conakry' 'Dakar' 'Dar_es_Salaam' 'Djibouti' 'Douala' 'El_Aaiun' 'Freetown' 'Gaborone' 'Harare' 'Johannesburg' 'Juba' 'Kampala' 'Khartoum' 'Kigali' 'Kinshasa' 'Lagos' 'Libreville' 'Lome' 'Luanda' 'Lubumbashi' 'Lusaka' 'Malabo' 'Maputo' 'Maseru' 'Mbabane' 'Mogadishu' 'Monrovia' 'Nairobi' 'Ndjamena' 'Niamey' 'Nouakchott' 'Ouagadougou' 'Porto-Novo' 'Sao_Tome' 'Tripoli' 'Tunis' 'Windhoek')
+  America=('Adak' 'Anchorage' 'Anguilla' 'Antigua' 'Araguaina' 'Argentina/Buenos_Aires' 'Argentina/Catamarca' 'Argentina/Cordoba' 'Argentina/Jujuy' 'Argentina/La_Rioja' 'Argentina/Mendoza' 'Argentina/Rio_Gallegos' 'Argentina/Salta' 'Argentina/San_Juan' 'Argentina/San_Luis' 'Argentina/Tucuman' 'Argentina/Ushuaia' 'Aruba' 'Asuncion' 'Atikokan' 'Bahia' 'Bahia_Banderas' 'Barbados' 'Belem' 'Belize' 'Blanc-Sablon' 'Boa_Vista' 'Bogota' 'Boise' 'Cambridge_Bay' 'Campo_Grande' 'Cancun' 'Caracas' 'Cayenne' 'Cayman' 'Chicago' 'Chihuahua' 'Costa_Rica' 'Creston' 'Cuiaba' 'Curacao' 'Danmarkshavn' 'Dawson' 'Dawson_Creek' 'Denver' 'Detroit' 'Dominica' 'Edmonton' 'Eirunepe' 'El_Salvador' 'Fortaleza' 'Glace_Bay' 'Godthab' 'Goose_Bay' 'Grand_Turk' 'Grenada' 'Guadeloupe' 'Guatemala' 'Guayaquil' 'Guyana' 'Halifax' 'Havana' 'Hermosillo' 'Indiana/Indianapolis' 'Indiana/Knox' 'Indiana/Marengo' 'Indiana/Petersburg' 'Indiana/Tell_City' 'Indiana/Vevay' 'Indiana/Vincennes' 'Indiana/Winamac' 'Inuvik' 'Iqaluit' 'Jamaica' 'Juneau' 'Kentucky/Louisville' 'Kentucky/Monticello' 'Kralendijk' 'La_Paz' 'Lima' 'Los_Angeles' 'Lower_Princes' 'Maceio' 'Managua' 'Manaus' 'Marigot' 'Martinique' 'Matamoros' 'Mazatlan' 'Menominee' 'Merida' 'Metlakatla' 'Mexico_City' 'Miquelon' 'Moncton' 'Monterrey' 'Montevideo' 'Montserrat' 'Nassau' 'New_York' 'Nipigon' 'Nome' 'Noronha' 'North_Dakota/Beulah' 'North_Dakota/Center' 'North_Dakota/New_Salem' 'Ojinaga' 'Panama' 'Pangnirtung' 'Paramaribo' 'Phoenix' 'Port-au-Prince' 'Port_of_Spain' 'Porto_Velho' 'Puerto_Rico' 'Rainy_River' 'Rankin_Inlet' 'Recife' 'Regina' 'Resolute' 'Rio_Branco' 'Santa_Isabel' 'Santarem' 'Santiago' 'Santo_Domingo' 'Sao_Paulo' 'Scoresbysund' 'Sitka' 'St_Barthelemy' 'St_Johns' 'St_Kitts' 'St_Lucia' 'St_Thomas' 'St_Vincent' 'Swift_Current' 'Tegucigalpa' 'Thule' 'Thunder_Bay' 'Tijuana' 'Toronto' 'Tortola' 'Vancouver' 'Whitehorse' 'Winnipeg' 'Yakutat' 'Yellowknife')
+  Antarctica=('Casey' 'Davis' 'DumontDUrville' 'Macquarie' 'Mawson' 'McMurdo' 'Palmer' 'Rothera' 'Syowa' 'Vostok')
+  Arctic=('Longyearbyen')
+  Asia=('Aden' 'Almaty' 'Amman' 'Anadyr' 'Aqtau' 'Aqtobe' 'Ashgabat' 'Baghdad' 'Bahrain' 'Baku' 'Bangkok' 'Beirut' 'Bishkek' 'Brunei' 'Choibalsan' 'Chongqing' 'Colombo' 'Damascus' 'Dhaka' 'Dili' 'Dubai' 'Dushanbe' 'Gaza' 'Harbin' 'Hebron' 'Ho_Chi_Minh' 'Hong_Kong' 'Hovd' 'Irkutsk' 'Jakarta' 'Jayapura' 'Jerusalem' 'Kabul' 'Kamchatka' 'Karachi' 'Kashgar' 'Kathmandu' 'Khandyga' 'Kolkata' 'Krasnoyarsk' 'Kuala_Lumpur' 'Kuching' 'Kuwait' 'Macau' 'Magadan' 'Makassar' 'Manila' 'Muscat' 'Nicosia' 'Novokuznetsk' 'Novosibirsk' 'Omsk' 'Oral' 'Phnom_Penh' 'Pontianak' 'Pyongyang' 'Qatar' 'Qyzylorda' 'Rangoon' 'Riyadh' 'Sakhalin' 'Samarkand' 'Seoul' 'Shanghai' 'Singapore' 'Taipei' 'Tashkent' 'Tbilisi' 'Tehran' 'Thimphu' 'Tokyo' 'Ulaanbaatar' 'Urumqi' 'Ust-Nera' 'Vientiane' 'Vladivostok' 'Yakutsk' 'Yekaterinburg' 'Yerevan')
+  Atlantic=('Azores' 'Bermuda' 'Canary' 'Cape_Verde' 'Faroe' 'Madeira' 'Reykjavik' 'South_Georgia' 'St_Helena' 'Stanley')
+  Australia=('Adelaide' 'Brisbane' 'Broken_Hill' 'Currie' 'Darwin' 'Eucla' 'Hobart' 'Lindeman' 'Lord_Howe' 'Melbourne' 'Perth' 'Sydney')
+  Europe=('Amsterdam' 'Andorra' 'Athens' 'Belgrade' 'Berlin' 'Bratislava' 'Brussels' 'Bucharest' 'Budapest' 'Busingen' 'Chisinau' 'Copenhagen' 'Dublin' 'Gibraltar' 'Guernsey' 'Helsinki' 'Isle_of_Man' 'Istanbul' 'Jersey' 'Kaliningrad' 'Kiev' 'Lisbon' 'Ljubljana' 'London' 'Luxembourg' 'Madrid' 'Malta' 'Mariehamn' 'Minsk' 'Monaco' 'Moscow' 'Oslo' 'Paris' 'Podgorica' 'Prague' 'Riga' 'Rome' 'Samara' 'San_Marino' 'Sarajevo' 'Simferopol' 'Skopje' 'Sofia' 'Stockholm' 'Tallinn' 'Tirane' 'Uzhgorod' 'Vaduz' 'Vatican' 'Vienna' 'Vilnius' 'Volgograd' 'Warsaw' 'Zagreb' 'Zaporozhye' 'Zurich')
+  Indian=('Antananarivo' 'Chagos' 'Christmas' 'Cocos' 'Comoro' 'Kerguelen' 'Mahe' 'Maldives' 'Mauritius' 'Mayotte' 'Reunion')
+  Pacific=('Apia' 'Auckland' 'Chatham' 'Chuuk' 'Easter' 'Efate' 'Enderbury' 'Fakaofo' 'Fiji' 'Funafuti' 'Galapagos' 'Gambier' 'Guadalcanal' 'Guam' 'Honolulu' 'Johnston' 'Kiritimati' 'Kosrae' 'Kwajalein' 'Majuro' 'Marquesas' 'Midway' 'Nauru' 'Niue' 'Norfolk' 'Noumea' 'Pago_Pago' 'Palau' 'Pitcairn' 'Pohnpei' 'Port_Moresby' 'Rarotonga' 'Saipan' 'Tahiti' 'Tarawa' 'Tongatapu' 'Wake' 'Wallis')
+
+  if [ -z "$1" ]; then
+    printRegion $zoneRegion[@]
+  elif [ "$1" = "Africa" ]; then
+    printRegion Africa[@]
+  elif [ "$1" = "America" ]; then
+    printRegion America[@]
+  elif [ "$1" = "Antarctica" ]; then
+    printRegion Antarctica[@]
+  elif [ "$1" = "Arctic" ]; then
+    printRegion Arctic[@]
+  elif [ "$1" = "Asia" ]; then
+    printRegion Asia[@]
+  elif [ "$1" = "Atlantic" ]; then
+    printRegion Atlantic[@]
+  elif [ "$1" = "Australia" ]; then
+    printRegion Australia[@]
+  elif [ "$1" = "Europe" ]; then
+    printRegion Europe[@]
+  elif [ "$1" = "Indian" ]; then
+    printRegion Indian[@]
+  elif [ "$1" = "Pacific" ]; then
+    printRegion Pacific[@]
+  fi
+}
+
+export -f printRegion listZones
+
+# Change in /usr/share/polkit-1/actions/org.freedesktop.timedate1.policy "auth_admin_keep" to "yes"
+
+zoneState=$(timedatectl status 2>/dev/null | grep -e "Time zone:" -e "Timezone:" | awk '{print $3}');
+zoneRegion=$(echo "$zoneState" | cut -d / -f 1);
+zoneCity=$(echo "$zoneState" | cut -d / -f 1 --complement);
+zoneList=$(listZones "$zoneRegion" 2>&1);
+zoneSelect=$(echo "$zoneList" | grep -n "$zoneCity" | awk -F : '{print $1-1}');
+export zoneRegion
+
+zoneTree() {
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="false|true" selected-row="'$zoneSelect'" exported-column="1" rules-hint="true">
+      <variable>'$1'</variable>
+      <label>| '$1'</label>
+      <height>'$4'</height>
+      <width>'$5'</width>
+      <input icon-column="0">bash -c "listZones $'$2'"</input>
+    </tree>
+    <comboboxtext>
+      <default>'$zoneRegion'</default>
+      <variable>'$2'</variable>
+      <item>Africa</item>
+      <item>America</item>
+      <item>Antarctica</item>
+      <item>Arctic</item>
+      <item>Asia</item>
+      <item>Atlantic</item>
+      <item>Australia</item>
+      <item>Europe</item>
+      <item>Indian</item>
+      <item>Pacific</item>
+      <action function="refresh">'$1'</action>
+    </comboboxtext>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo Setting '$4': $'$1'</action>
+        <action>timedatectl set-timezone "$'$2'/$'$1'"</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo Resetting: '$1' '$2'</action>
+        <action function="refresh">'$1'</action>
+        <action>timedatectl set-timezone "${zoneRegion}/$'$1'"</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+    </hbox>'
+}
+############################################################################################
+
+saveConfig() {
+  tmpFile="/dev/shm/justbrowsing.cfg"
+  date > "$tmpFile"
+  echo "Display:$Display" >> "$tmpFile"
+  echo "Rotate:$Rotate" >> "$tmpFile"
+  echo "Keymap:$Keymap" >> "$tmpFile"
+  echo "Default:$Default" >> "$tmpFile"
+  echo "GPU:$GPU" >> "$tmpFile"
+  echo "Copy2RAM:$Copy2RAM" >> "$tmpFile"
+  echo "zRAM:$zRAM" >> "$tmpFile"
+  echo "CleanProfiles:$CleanProfiles" >> "$tmpFile"
+  echo "URL:$URL" >> "$tmpFile"
+  echo "Timezone:$Timezone" >> "$tmpFile"
+  echo "Region:$Region" >> "$tmpFile"
+  echo "Locale:$Locale" >> "$tmpFile"
+  echo "SavedPrinters:$SavedPrinters" >> "$tmpFile"
+  echo "USBprint:$USBprint" >> "$tmpFile"
+  echo "Printer:$Printer" >> "$tmpFile"
+  echo "Network:$Network" >> "$tmpFile"
+}
+export -f saveConfig
+
+
+MAIN_DIALOG='
+<window title="JustBrowsing Config" resizable="false" width-request="625" image-name="'$workDir'/jb-geek16.png">
+<vbox>
+  <notebook tab-labels="Settings|Advanced">
+  <vbox label="Settings">
+    <frame>
+      <hbox>
+        <vbox>
+          '"`displayTree Display Rotate gtk-fullscreen 150 50`"'
+          <hseparator></hseparator>
+          '"`keymapTree Keymap 1 gtk-select-font 150 50`"'
+        </vbox>
+        <vseparator></vseparator>
+        <vbox>
+          '"`defaultRadio`"'
+          '"`virtualRadio`"'
+          '"`checkBoxes`"'
+          '"`urlEntry`"'
+        </vbox>
+        <vseparator></vseparator>
+        <vbox>
+          '"`zoneTree Timezone Region gtk-home 150 200`"'
+          <hseparator></hseparator>
+          '"`localeTree Locale 1 gtk-spell-check 150 200`"'
+        </vbox>
+      </hbox>
+    </frame>
+  </vbox>
+
+  <vbox label="Advanced">
+    <frame>
+      <hbox>
+        <vbox>
+          '"`knownPrinterTree SavedPrinters 0 gtk-print 160 200`"'
+          <hseparator></hseparator>
+          '"`networkTree Network 0 gtk-network 160 200`"'
+          <hseparator></hseparator>
+        </vbox>
+        <vseparator></vseparator>
+        <vbox>
+        '"`printerTree USBprint Printer Brand 300 380`"'
+          <hseparator></hseparator>
+        </vbox>
+      </hbox>
+    </frame>
+  </vbox>
+  </notebook>
+  <hbox>
+    <button ok>
+      <action>bash -c "saveConfig 2>/dev/null"</action>
+      <action>exit:Quit</action>
+    </button>
+    <button cancel>
+      <action>exit:Quit</action>
+    </button>
+    <button help>
+      <action>/opt/kscripts/helpreport &</action>
+      <action>exit:Quit</action>
+    </button>
+  </hbox>
+</vbox>
+</window>
+'
+
+export MAIN_DIALOG
+gtkdialog -c --program MAIN_DIALOG
+
+### END ###
