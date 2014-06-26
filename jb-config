@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="0.3" ######
+version="0.4" ######
 ### JustBrowsing ###
 ####################
 
@@ -205,13 +205,13 @@ defaultRadio() {
   echo '<frame>
           <text><label>Default web browser</label></text>
             <hbox homogeneous="true">
-			<radiobutton>
+			<radiobutton sensitive="false">
                 <label>Firefox</label>
                 <default>true</default>
 			    <variable>Default</variable>
 			    <action>echo</action>
      		</radiobutton>
-			<radiobutton>
+			<radiobutton sensitive="false">
                 <label>Chrome</label>
 			    <variable>Default</variable>
 			    <action>echo</action>
@@ -223,23 +223,23 @@ defaultRadio() {
 virtualRadio() {
   echo '<frame>
           <text><label>Virtual GPU</label></text>
-			<radiobutton>
+			<radiobutton sensitive="false">
                 <label>none</label>
                 <default>true</default>
 			    <variable>GPU</variable>
 			    <action>echo</action>
      		</radiobutton>
-			<radiobutton>
+			<radiobutton sensitive="false">
                 <label>Spice/QXL</label>
 			    <variable>GPU</variable>
 			    <action>echo</action>
      		</radiobutton>
-			<radiobutton>
+			<radiobutton sensitive="false">
                 <label>VirtualBox</label>
 			    <variable>GPU</variable>
 			    <action>echo</action>
      		</radiobutton>
-			<radiobutton>
+			<radiobutton sensitive="false">
                 <label>VMware</label>
 			    <variable>GPU</variable>
 			    <action>echo</action>
@@ -250,17 +250,17 @@ virtualRadio() {
 checkBoxes() {
   echo '<frame>
           <text><label>More options (requires reboot)</label></text>
-			<checkbox>
+			<checkbox sensitive="false">
                 <label>Copy to RAM</label>
 			    <variable>Copy2RAM</variable>
 			    <action>echo</action>
      		</checkbox>
-			<checkbox>
+			<checkbox sensitive="false">
                 <label>Enable zRAM</label>
 			    <variable>zRAM</variable>
 			    <action>echo</action>
      		</checkbox>
-			<checkbox>
+			<checkbox sensitive="false">
                 <label>Enable "clean" profiles</label>
 			    <variable>CleanProfiles</variable>
 			    <action>echo</action>
@@ -270,7 +270,7 @@ checkBoxes() {
 
 urlEntry() {
   echo '<text><label>Homepage</label></text>
-        <comboboxentry>
+        <comboboxentry sensitive="false">
           <variable>URL</variable>
           <default>(none)</default>
           <item>http://justbrowsing.info</item>
@@ -280,25 +280,38 @@ urlEntry() {
 
 ############################################################################################
 
-displayOut=$(xrandr --current 2>&1 | grep " connected" | awk '{print $1}' | awk NR==1);
-displayState=$(xrandr --current 2>&1 | grep " connected" | awk '{print $3}' | awk -F + '{print $1}');
-displayList=$(xrandr --current 2>&1 | grep "^   " | awk '{print $1}' | sort -nr);
-displaySelect=$(grep -n "$displayState" <(echo "$displayList") | awk -F : '{print $1-1}');
-export displayOut
+getDisplay() {
+  resolutions=$(xrandr --current 2>&1 | grep "^   " | awk '{print $1}' | sort -nr)
+  if [ "$1" = "gtk" ]; then 
+    echo "$resolutions" | awk '{print $1"|"$1}'
+  else
+    echo "$resolutions"
+  fi
+}
 
 setDisplay() {
-  xrandr --output "$displayOut" --mode "$1" --rotate "$2"
+echo "==> $displayOut :: $1 :: $2"
+  xrandr --output "$displayOut" --mode "$1" --rotate "$2" || 
+  xrandr --output "$displayOut" --mode "$1"
   [ -f "/opt/justbrowsing/autosize" ] && /opt/justbrowsing/autosize jb-config
 }
-export -f setDisplay
+
+export -f getDisplay setDisplay
+
+displayOut=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
+displayState=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $3}' | awk -F + '{print $1}');
+displayActive=$(xrandr --current 2>&1 | grep "*" | awk '{print $1}' | awk NR==1)
+displayList=$(getDisplay 2>&1);
+displaySelect=$(grep -n "$displayState" <(echo "$displayList") | awk -F : '{print $1-1}');
+export displayOut displayActive
 
 displayTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$displaySelect'" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|false" selected-row="'$displaySelect'" exported-column="0" rules-hint="true" auto-stort="true" sort-type="1" column-sort-function="1">
       <variable>'$1'</variable>
-      <label>'$1'</label>
+      <label>'$1' | </label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input>xrandr 2>/dev/null | grep "^   " | awk '\''{print $1}'\''</input>
+      <input icon-column="0">bash -c "getDisplay gtk"</input>
     </tree>
     <comboboxtext>
       <variable>'$2'</variable>
@@ -324,53 +337,80 @@ displayTree() {
 
 ############################################################################################
 
-locales=('Afrikaans:af' 'Amharic:am' 'Belarusian:be' 'Breton:br' 'Bulgarian:bg' 'Catalan:ca' 'German:de' 'Greek:gr' 'English (GB):gb' 'English (US):us' 'Spanish:es' 'Estonian:et' 'Finnish:fi' 'French:fr' 'Croatian:hr' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Lithuanian:lt' 'Latvian:lv' 'Macedonian:mk' 'Malaylam:ml' 'Dutch:nl' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Swedish:se' 'Thai:th' 'Turkish:tr' 'Chinese:cn' 'Taiwanese:tw')
-    langName=$(echo ${locales[$index]} | awk -F ":" '{print $1}')
-    langCode=$(echo ${locales[$index]} | awk -F ":" '{print $2}')
+listLocales() {
+  locales=('English (US):en_US' 'Afrikaans:af' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'Bulgaria:bg' 'Catalan:ca' 'Chinese Mainland:zh_CN' 'Chinese Taiwan:zh_TW' 'Croatian:hr' 'Dutch:nl' 'English (GB):en_GB' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:el' 'Hebrew:he' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Korean):ko' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:sv' 'Thai:th' 'Turkish:tr' 'Vietnamese:vi')
+
+  IFS=$(echo -en "\n\b"); 
+  for i in ${locales[@]}; do
+    echo $i | awk -F : '{print $1"|"$1"|"$2}';
+  done
+}
+
+export -f listLocales
 
 localeTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$localeSelect'" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="'$localeSelect'" exported-column="1" rules-hint="true">
       <variable>'$1'</variable>
-      <label>'$1'</label>
+      <label>'$1' | Code</label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input>localectl list-x11-keymap-layouts 2>&1</input>
+      <input icon-column="0">bash -c "listLocales"</input>
     </tree>
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
         <action>echo Setting '$4': $'$1'</action>
-        <action>#setkeymap $'$1'</action>
+        <action>/opt/justbrowsing/setlocale $'$1'</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
         <action>echo Resetting '$4'</action>
         <action function="refresh">'$1'</action>
-        <action>#setkeymap $'$1'</action>
+        <action>/opt/justbrowsing/setlocale</action>
       </button>
     </hbox>'
 }
 
 
-keymapState=$(xkb-switch -p 2>&1);
-keymapList=$(localectl list-x11-keymap-layouts 2>&1);
+listKeymaps() {
+  layouts=('US (Qwerty):us' 'US (Intl):us(intl)' 'US (Dvorak):us(dvorak)' 'Afrikaans:af' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'British:gb'  'Bulgarian:bg' 'Catalan:ca' 'Chinese Pinyin:cn' 'Chinese Cangjie:tw' 'Croatian:hr' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:gr' 'Hebrew:il' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese (skk):jp' 'Korean (romaja):kr' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:se' 'Thai:th' 'Turkish:tr' 'Vietnamese (tcvn):vn')
+  IFS=$(echo -en "\n\b"); 
+  for i in ${layouts[@]}; do
+    echo $i | awk -F : '{print $1"|"$1"|"$2}';
+  done
+}
+
+setKeymap() {
+echo "$@"
+  layout="$1"
+  [ -z "$layout" ] && layout="$KEYMAP"
+  [ -z "$layout" ] && layout="us"
+  export KEYMAP="$layout"
+  pkill -f jbxkb
+  jbxkb noquit "$layout" &
+}
+
+export -f listKeymaps setKeymap
+
+keymapState=$(xkb-switch 2>&1);
+keymapList=$(listKeymaps 2>&1);
 keymapSelect=$(grep -n "$keymapState" <(echo "$keymapList") | awk -F : '{print $1-1}');
 
 keymapTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$keymapSelect'" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="'$keymapSelect'" exported-column="1" rules-hint="true">
       <variable>'$1'</variable>
-      <label>'$1'</label>
+      <label>'$1' | Code</label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input>localectl list-x11-keymap-layouts 2>&1</input>
+      <input icon-column="0">bash -c "listKeymaps"</input>
     </tree>
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
         <action>echo Setting '$4': $'$1'</action>
-        <action>setkeymap $'$1'</action>
+        <action>bash -c "setKeymap "\""$'$1'"\"""</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
         <action>echo Resetting '$4'</action>
         <action function="refresh">'$1'</action>
-        <action>setkeymap $'$1'</action>
+        <action>bash -c "setKeymap $KEYMAP"</action>
       </button>
     </hbox>'
 }
@@ -378,10 +418,13 @@ keymapTree() {
 ############################################################################################
 printRegion() {
   input=("${!1}")
+  input=($zoneCity "${input[@]/$zoneCity}");
+
   region=${#input[@]}
   index=0
   while [ "$index" -lt "$region" ] 2>/dev/null; do
-    echo "${input[$index]}||${input[$index]}"
+    cityname=$(echo "${input[$index]}" | sed 's/_/ /g')
+    echo "${cityname}||${input[$index]}"
     index=$((index+1))
   done;
 }
@@ -432,7 +475,7 @@ zoneRegion=$(echo "$zoneState" | cut -d / -f 1);
 zoneCity=$(echo "$zoneState" | cut -d / -f 1 --complement);
 zoneList=$(listZones "$zoneRegion" 2>&1);
 zoneSelect=$(echo "$zoneList" | grep -n "$zoneCity" | awk -F : '{print $1-1}');
-export zoneRegion
+export zoneRegion zoneCity
 
 zoneTree() {
   echo '<tree selection-mode="2" stock-id="'$3'" column-visible="false|true" selected-row="'$zoneSelect'" exported-column="1" rules-hint="true">
@@ -496,16 +539,16 @@ export -f saveConfig
 
 
 MAIN_DIALOG='
-<window title="JustBrowsing Config" resizable="false">
+<window title="JustBrowsing Config" icon-name="gnome-control-center" resizable="false" width-request="680">
 <vbox>
   <notebook tab-labels="Settings|Advanced">
   <vbox label="Settings">
     <frame>
       <hbox>
         <vbox>
-          '"`displayTree Display Rotate gtk-fullscreen 150 50`"'
+          '"`displayTree Display Rotate gtk-fullscreen 175 220`"'
           <hseparator></hseparator>
-          '"`keymapTree Keymap 1 gtk-select-font 150 50`"'
+          '"`keymapTree Keymap 1 gtk-select-font 185 220`"'
         </vbox>
         <vseparator></vseparator>
         <vbox>
@@ -516,9 +559,9 @@ MAIN_DIALOG='
         </vbox>
         <vseparator></vseparator>
         <vbox>
-          '"`zoneTree Timezone Region gtk-home 150 190`"'
+          '"`zoneTree Timezone Region gtk-home 175 220`"'
           <hseparator></hseparator>
-          '"`localeTree Locale 1 gtk-spell-check 150 190`"'
+          '"`localeTree Locale 1 gtk-spell-check 185 220`"'
         </vbox>
       </hbox>
     </frame>
@@ -528,14 +571,14 @@ MAIN_DIALOG='
     <frame>
       <hbox>
         <vbox>
-          '"`knownPrinterTree SavedPrinters 0 gtk-print 160 200`"'
+          '"`knownPrinterTree SavedPrinters 0 gtk-print 160 220`"'
           <hseparator></hseparator>
-          '"`networkTree Network 0 gtk-network 160 200`"'
+          '"`networkTree Network 0 gtk-network 160 220`"'
           <hseparator></hseparator>
         </vbox>
         <vseparator></vseparator>
         <vbox>
-        '"`printerTree USBprint Printer Brand 380 380`"'
+        '"`printerTree USBprint Printer Brand 420 420`"'
           <hseparator></hseparator>
         </vbox>
       </hbox>
