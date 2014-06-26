@@ -1,11 +1,13 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="0.4" ######
+version="0.5" ######
 ### JustBrowsing ###
 ####################
 
 workDir=$(dirname $(readlink  -e "$0"));
+width="710"
+icon="gnome-control-center"
 
 ############################################################################################
 
@@ -339,14 +341,22 @@ displayTree() {
 
 listLocales() {
   locales=('English (US):en_US' 'Afrikaans:af' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'Bulgaria:bg' 'Catalan:ca' 'Chinese Mainland:zh_CN' 'Chinese Taiwan:zh_TW' 'Croatian:hr' 'Dutch:nl' 'English (GB):en_GB' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:el' 'Hebrew:he' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Korean):ko' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:sv' 'Thai:th' 'Turkish:tr' 'Vietnamese:vi')
-
-  IFS=$(echo -en "\n\b"); 
+  IFS=$(echo -en "\n\b");
   for i in ${locales[@]}; do
-    echo $i | awk -F : '{print $1"|"$1"|"$2}';
+    if [ "$1" = "gtk" ]; then
+      echo "$i" | awk -F : '{print $1"|"$1"|"$2}';
+    else
+      echo "$i"
+    fi
   done
 }
 
 export -f listLocales
+
+localeState=$(/opt/justbrowsing/setlocale | awk -F : '{print $1}')
+localeList=$(listLocales 2>&1);
+localeSelect=$(grep -n ":${localeState}$" <(echo "$localeList") | awk -F : '{print $1-1}');
+echo "::$localeState : $localeSelect"
 
 localeTree() {
   echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="'$localeSelect'" exported-column="1" rules-hint="true">
@@ -354,7 +364,7 @@ localeTree() {
       <label>'$1' | Code</label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input icon-column="0">bash -c "listLocales"</input>
+      <input icon-column="0">bash -c "listLocales gtk"</input>
     </tree>
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
@@ -369,6 +379,7 @@ localeTree() {
     </hbox>'
 }
 
+############################################################################################
 
 listKeymaps() {
   layouts=('US (Qwerty):us' 'US (Intl):us(intl)' 'US (Dvorak):us(dvorak)' 'Afrikaans:af' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'British:gb'  'Bulgarian:bg' 'Catalan:ca' 'Chinese Pinyin:cn' 'Chinese Cangjie:tw' 'Croatian:hr' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:gr' 'Hebrew:il' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese (skk):jp' 'Korean (romaja):kr' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:se' 'Thai:th' 'Turkish:tr' 'Vietnamese (tcvn):vn')
@@ -539,7 +550,7 @@ export -f saveConfig
 
 
 MAIN_DIALOG='
-<window title="JustBrowsing Config" icon-name="gnome-control-center" resizable="false" width-request="680">
+<window title="JustBrowsing Config" icon-name="'$icon'" resizable="false" width-request="'$width'">
 <vbox>
   <notebook tab-labels="Settings|Advanced">
   <vbox label="Settings">
