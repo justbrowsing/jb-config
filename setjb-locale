@@ -1,0 +1,17 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  locale="$1"
+elif [ -f "$config" ]; then
+  locale=$(grep ^locale "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+[ -z "$locale" ] && locale="en_US"
+LANGUAGE=$(echo "$locale" | awk -F "-" '{print $1}');
+MOZILLA_LANG=$(echo "$locale" | sed 's/_/-/g')
+
+echo $LANGUAGE:$MOZILLA_LANG
+sed -i '/^locale/d' "$config"
+echo "locale = ${LANGUAGE}" >> "$config"
+export LANGUAGE MOZILLA_LANG

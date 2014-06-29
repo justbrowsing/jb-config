@@ -1,0 +1,15 @@
+#!/bin/bash
+
+config="$HOME/.config/adeskbar/default.cfg";
+
+if [ -f "/tmp/google-chrome.lock" ]; then
+  rm /tmp/google-chrome.lock
+  browser="firefox"
+else
+  rm /tmp/firefox.lock
+  browser="google-chrome"
+fi
+
+touch /tmp/${browser}.lock
+cp /opt/justbrowsing/${browser}.cfg "$config"
+i3-msg exit

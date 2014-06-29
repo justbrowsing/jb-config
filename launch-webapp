@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [ "$1" = "notes" ]; then
+  webapp="notes";
+elif [ "$1" = "calc" ]; then
+  webapp="calc";
+elif [ "$1" = "timers" ]; then
+  webapp="timers";
+elif [ "$1" = "email" ]; then
+  webapp="email";
+elif [ "$1" = "wageclock" ]; then
+  webapp="wageclock";
+else
+  exit 1;
+fi
+
+x-www-browser /apps/${webapp}/index.html

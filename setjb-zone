@@ -1,0 +1,20 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  zone="$1"
+elif [ -f "$config" ]; then
+  zone=$(grep ^zone "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+[ -z "$zone" ] && zone="America/Los_Angeles"
+sanitycheck=$(timedatectl list-timezones | grep ^${zone}$ | wc -l);
+
+if [ "$sanitycheck" = 1 ]; then
+  timedatectl set-timezone "$zone"
+  sed -i '/^zone/d' "$config"
+  echo "zone = ${zone}" >> "$config"
+fi
+
+echo "$zone"
+export zone

@@ -1,0 +1,84 @@
+#!/bin/bash
+version=1.0
+
+applets=$(loadjb-systray 2>/dev/null);
+[ -z "$applets" ] && applets="3"
+minimum=$((622+applets*28))
+adeskbar="$HOME/.config/adeskbar/default.cfg"
+log="/tmp/autosize.log"
+
+get_dimensions()
+{
+  dimensions=$(xrandr  --current 2>&1 | grep ", current " | awk -F "," '{print $2}');
+  width=$(echo "$dimensions" | awk -F "^ current " '{print $2}' | awk NR==1 | awk '{print $1}');
+  height=$(echo "$dimensions" | awk -F "^ current " '{print $2}' | awk NR==1 | awk '{print $3}');
+}
+
+get_wallpaper()
+{
+  # Prioritize by width
+  if [ -z "$width" -o -z "$height" ]; then
+    append="1024x768";
+  elif [ "$width" -le "800" ]; then
+    append="800x600";
+  elif [ "$width" -le "1024" ]; then
+    append="1024x768";
+  elif [ "$width" -le "1280" ] && [ "$height" -le "768" ]; then
+    append="1280x768";
+  elif [ "$width" -le "1280" ]; then
+    append="1280x1024";
+  elif [ "$width" -le "1366" ]; then
+    append="1366x768";
+  elif [ "$width" -le "1600" ]; then
+    append="1600x900";
+  elif [ "$width" -le "1680" ]; then
+    append="1680x1050";
+  elif [ "$width" -le "1920" ]; then
+    append="1920x1080";
+  elif [ "$width" -le "2560" ]; then
+    append="2560x1920";
+  elif [ "$width" -le "2880" ]; then
+    append="2880x1800";
+  else
+    append="3200x2048";
+  fi
+}
+
+get_adeskbar()
+{
+  gap=$(echo "${width}-${minimum}" | bc);
+  left=$(echo "${gap}/4" | bc);
+  midleft=$(echo "${gap}/4" | bc);
+  midright=$(echo "${gap}/4" | bc);
+  right=$(echo "${gap}/4" | bc);
+}
+
+
+date >> "$log"
+get_dimensions;
+echo $width | tee -a "$log"
+
+get_wallpaper;
+echo $append | tee -a "$log"
+echo "wallpaper_$append.png" | tee -a "$log"
+cp /usr/share/backgrounds/justbrowsing/wallpaper/wallpaper_$append.png $HOME/.i3/wallpaper.png
+cp /usr/share/backgrounds/justbrowsing/lockscreen/lockscreen_$append.png $HOME/.i3/lockscreen.png
+ls $HOME/.i3/{wallpaper,lockscreen}.png | tee -a "$log"
+
+get_adeskbar;
+echo "$left : $midleft : $midright : $right = $gap" | tee -a "$log"
+spacer1=$(grep -n "\[LAUNCHER/3]" "$adeskbar" 2>/dev/null | awk -F : '{print $1+4}')
+sed -i "${spacer1}s/^size=.*/size=$left/g" "$adeskbar"
+spacer2=$(grep -n "\[LAUNCHER/9]" "$adeskbar" 2>/dev/null | awk -F : '{print $1+4}')
+sed -i "${spacer2}s/^size=.*/size=$midleft/g" "$adeskbar"
+spacer3=$(grep -n "\[LAUNCHER/10]" "$adeskbar" 2>/dev/null | awk -F : '{print $1+4}')
+sed -i "${spacer3}s/^size=.*/size=$midright/g" "$adeskbar"
+spacer4=$(grep -n "\[LAUNCHER/16]" "$adeskbar" 2>/dev/null | awk -F : '{print $1+4}')
+sed -i "${spacer4}s/^size=.*/size=$right/g" "$adeskbar"
+
+nitrogen --restore &
+pkill -f "python2 main.py"
+adeskbar &
+loadjb-systray --restore &
+
+### END ###

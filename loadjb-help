@@ -1,0 +1,20 @@
+#!/bin/bash
+version="0.2"
+
+bugFile="$HOME/Downloads/bugreport.tar.gz"
+tmpDir="/tmp"
+bugDir=".bugreport"
+rm "$bugFile" 2>/dev/null
+mkdir -p "${tmpDir}/${bugDir}"
+date > "${tmpDir}/${bugDir}/system.log"
+cat /etc/machine-id >> "${tmpDir}/${bugDir}/system.log"
+uname -a >> "${tmpDir}/${bugDir}/system.log"
+cat /proc/cpuinfo > "${tmpDir}/${bugDir}/specs.log"
+lsusb >> "${tmpDir}/${bugDir}/specs.log"
+lspci >> "${tmpDir}/${bugDir}/specs.log"
+dmesg > "${tmpDir}/${bugDir}/dmesg.log"
+systemctl -l --all > "${tmpDir}/${bugDir}/systemd.log"
+scrot -d 3 -m ${tmpDir}/${bugDir}/'%Y-%m-%d-%T_$wx$h.png'
+tar -C "$tmpDir" -czf "$bugFile" "${bugDir}"
+x-www-browser "http://justbrowsing.info/support"
+

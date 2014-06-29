@@ -1,0 +1,62 @@
+#!/bin/bash
+####################
+### loadconfig #####
+version=0.1 ########
+### JustBrowsing ###
+####################
+
+probeDevice="/dev/disk/by-label/JUSTDATA"
+mntDir="/etc/justbrowsing/mount"
+saveDir="/etc/justbrowsing/data"
+
+EXIT_STATUS() { echo "ERROR: $@"; exit 1; }
+
+PARSE_BOOT() { 
+  cat /proc/cmdline 2>/dev/null | grep -o "$1=\S*" | awk -F = '{print $2}' | tail -n 1; 
+}
+
+OVERRIDE_CONFIG() {
+  parameter=$(eval echo \$$1);
+  if [ ! -z "$parameter" ]; then
+    sed -i "/^$1/d" ${saveDir}/config
+    echo "$1 = $parameter" >> ${saveDir}/config
+  fi
+}
+
+export -f PARSE_BOOT OVERRIDE_CONFIG
+
+# Load config from persistent storage
+if [ -b "$probeDevice" ]; then
+  [ "$UID" = "0" ] || EXIT_STATUS "Need to be root"
+  mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
+  mount -o ro "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
+  [ -f "${mntDir}/justbrowsing.cfg" ] &&
+  cp "${mntDir}/justbrowsing.cfg" "${saveDir}/config" || EXIT_STATUS "unable copy config file"
+  umount "$mntDir" 2>/dev/null || EXIT_STATUS "unable to unmount $mntDir"
+fi
+
+# Load config from boot parameters
+display=$(PARSE_BOOT display)
+zone=$(PARSE_BOOT zone)
+keymap=$(PARSE_BOOT keymap)
+locale=$(PARSE_BOOT locale)
+clean=$(PARSE_BOOT clean)
+gpu=$(PARSE_BOOT gpu)
+url=$(PARSE_BOOT url)
+default=$(PARSE_BOOT default)
+[ "$default" = "chrome" ] && default="google-chrome"
+
+# Override config with boot parameters
+mkdir -p "$saveDir" || EXIT_STATUS "unable to create $saveDir"
+OVERRIDE_CONFIG display
+OVERRIDE_CONFIG zone
+OVERRIDE_CONFIG keymap
+OVERRIDE_CONFIG locale
+OVERRIDE_CONFIG clean
+OVERRIDE_CONFIG gpu
+OVERRIDE_CONFIG url
+OVERRIDE_CONFIG default
+
+chown -R user:users "$saveDir"
+
+### END ###

@@ -1,0 +1,14 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ -f "$config" ]; then
+  LANGUAGE=$(grep ^locale "$config" | awk -F = '{print $NF}' | awk '{print $NF}' | awk -F "-" '{print $1}')
+  HOMEPAGE=$(grep ^url "$config" | awk -F = '{print $NF}' | awk '{print $NF}' | sed 's/_/-/g')
+  export LANGUAGE HOMEPAGE
+fi
+
+if [ ! -z "$HOMEPAGE" -a -z "$1" ]; then
+  /usr/bin/google-chrome "$HOMEPAGE" --no-first-run
+else
+  /usr/bin/google-chrome $@ --no-first-run
+fi

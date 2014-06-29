@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="0.5" ######
+version="0.7" ######
 ### JustBrowsing ###
 ####################
 
@@ -292,10 +292,8 @@ getDisplay() {
 }
 
 setDisplay() {
-echo "==> $displayOut :: $1 :: $2"
-  xrandr --output "$displayOut" --mode "$1" --rotate "$2" || 
-  xrandr --output "$displayOut" --mode "$1"
-  [ -f "/opt/justbrowsing/autosize" ] && /opt/justbrowsing/autosize jb-config
+  setjb-display "$1" "$2"
+  loadjb-panel
 }
 
 export -f getDisplay setDisplay
@@ -340,7 +338,7 @@ displayTree() {
 ############################################################################################
 
 listLocales() {
-  locales=('English (US):en_US' 'Afrikaans:af' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'Bulgaria:bg' 'Catalan:ca' 'Chinese Mainland:zh_CN' 'Chinese Taiwan:zh_TW' 'Croatian:hr' 'Dutch:nl' 'English (GB):en_GB' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:el' 'Hebrew:he' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Korean):ko' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:sv' 'Thai:th' 'Turkish:tr' 'Vietnamese:vi')
+  locales=('English (US):en_US' 'Afrikaans:af' 'Amharic:am' 'Arabic:ar' 'Belarusian:be' 'Breton:br' 'Bulgarian:bg' 'Catalan:ca' 'Chinese Mainland:zh_CN' 'Chinese Taiwan:zh_TW' 'Croatian:hr' 'Dutch:nl' 'English (GB):en_GB' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:el' 'Hebrew:he' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Korean:ko' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:sv' 'Thai:th' 'Turkish:tr' 'Vietnamese:vi')
   IFS=$(echo -en "\n\b");
   for i in ${locales[@]}; do
     if [ "$1" = "gtk" ]; then
@@ -353,7 +351,7 @@ listLocales() {
 
 export -f listLocales
 
-localeState=$(/opt/justbrowsing/setlocale | awk -F : '{print $1}')
+localeState=$(setjb-locale | awk -F : '{print $1}')
 localeList=$(listLocales 2>&1);
 localeSelect=$(grep -n ":${localeState}$" <(echo "$localeList") | awk -F : '{print $1-1}');
 echo "::$localeState : $localeSelect"
@@ -369,12 +367,12 @@ localeTree() {
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
         <action>echo Setting '$4': $'$1'</action>
-        <action>/opt/justbrowsing/setlocale $'$1'</action>
+        <action>setjb-locale "$'$1'"</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
         <action>echo Resetting '$4'</action>
         <action function="refresh">'$1'</action>
-        <action>/opt/justbrowsing/setlocale</action>
+        <action>setjb-locale</action>
       </button>
     </hbox>'
 }
@@ -382,24 +380,14 @@ localeTree() {
 ############################################################################################
 
 listKeymaps() {
-  layouts=('US (Qwerty):us' 'US (Intl):us(intl)' 'US (Dvorak):us(dvorak)' 'Afrikaans:af' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'British:gb'  'Bulgarian:bg' 'Catalan:ca' 'Chinese Pinyin:cn' 'Chinese Cangjie:tw' 'Croatian:hr' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:gr' 'Hebrew:il' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese (skk):jp' 'Korean (romaja):kr' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:se' 'Thai:th' 'Turkish:tr' 'Vietnamese (tcvn):vn')
+  layouts=('US (Qwerty):us' 'US (Intl):us(intl)' 'US (Dvorak):us(dvorak)' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'British:gb'  'Bulgarian:bg' 'Catalan:ca' 'Chinese Pinyin:cn' 'Chinese Cangjie:tw' 'Croatian:hr' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:gr' 'Hebrew:il' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese (skk):jp' 'Korean (romaja):kr' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:se' 'Thai (kesmanne):th' 'Turkish:tr' 'Vietnamese (tcvn):vn')
   IFS=$(echo -en "\n\b"); 
   for i in ${layouts[@]}; do
     echo $i | awk -F : '{print $1"|"$1"|"$2}';
   done
 }
 
-setKeymap() {
-echo "$@"
-  layout="$1"
-  [ -z "$layout" ] && layout="$KEYMAP"
-  [ -z "$layout" ] && layout="us"
-  export KEYMAP="$layout"
-  pkill -f jbxkb
-  jbxkb noquit "$layout" &
-}
-
-export -f listKeymaps setKeymap
+export -f listKeymaps
 
 keymapState=$(xkb-switch 2>&1);
 keymapList=$(listKeymaps 2>&1);
@@ -416,12 +404,12 @@ keymapTree() {
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
         <action>echo Setting '$4': $'$1'</action>
-        <action>bash -c "setKeymap "\""$'$1'"\"""</action>
+        <action>setjb-keymap "$'$1'"</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
         <action>echo Resetting '$4'</action>
         <action function="refresh">'$1'</action>
-        <action>bash -c "setKeymap $KEYMAP"</action>
+        <action>setjb-keymap</action>
       </button>
     </hbox>'
 }
@@ -514,12 +502,12 @@ zoneTree() {
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
         <action>echo Setting '$4': $'$1'</action>
-        <action>timedatectl set-timezone "$'$2'/$'$1'"</action>
+        <action>setjb-zone "$'$2'/$'$1'"</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
         <action>echo Resetting: '$1' '$2'</action>
         <action function="refresh">'$1'</action>
-        <action>timedatectl set-timezone "${zoneRegion}/$'$1'"</action>
+        <action>setjb-zone "${zoneRegion}/$'$1'"</action>
         <action>grabfocus:'$1'</action>
       </button>
     </hbox>'
@@ -589,7 +577,7 @@ MAIN_DIALOG='
         </vbox>
         <vseparator></vseparator>
         <vbox>
-        '"`printerTree USBprint Printer Brand 420 420`"'
+        '"`printerTree USBprint Printer Brand 420 440`"'
           <hseparator></hseparator>
         </vbox>
       </hbox>
@@ -605,7 +593,7 @@ MAIN_DIALOG='
       <action>exit:Quit</action>
     </button>
     <button help>
-      <action>/opt/justbrowsing/helpreport &</action>
+      <action>loadjb-help &</action>
       <action>exit:Quit</action>
     </button>
   </hbox>

@@ -1,0 +1,29 @@
+#!/bin/sh
+####################
+### justbrowsing ###
+version=0.2 ########
+####################
+
+[ "$1" = "--loop" ] && wm="$2" && shift && shift
+input="$@"
+
+if [ -f "/tmp/firefox.lock" ]; then
+  browser="firefox"
+elif [ -f "/tmp/google-chrome.lock" ]; then
+  browser="google-chrome"
+else
+  [ -z "$input" ] && input="https://duckduckgo.com"
+  browser="xdg-open"
+fi
+
+if [ -z "$wm" ]; then
+  "$browser" "$input"
+else
+  session=$(pgrep -o $wm);
+  while [ -n "$session" ]; do
+    running=$(pgrep -o $browser);
+    [ -z "$running" ] && "$browser" "$input" &
+    session=$(pgrep -o $wm)
+    sleep 0.5
+  done
+fi

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  keymap="$1"
+elif [ -f "$config" ]; then
+  keymap=$(grep ^keymap "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+[ -z "$keymap" ] && keymap="us"
+echo "$keymap"
+sed -i '/^keymap/d' "$config"
+echo "keymap = ${keymap}" >> "$config"
+
+export keymap
+pkill -f jbxkb
+jbxkb noquit "$keymap" &

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+config="/etc/justbrowsing/data/config"
+log="/tmp/start.log"
+
+echo "start $(date) $USER" >> "$log"
+
+if [ ! -f "/tmp/restoreboot.lock" ]; then
+  touch /tmp/restoreboot.lock;
+else
+  echo "already restored" >> "$log"
+  exit 0;
+fi
+
+if [ -f "$config" ]; then
+  default=$(grep ^default "$config" | awk -F = '{print $NF}' | awk '{print $NF}')
+  [ "$default" = "chrome" ] && default="google-chrome"
+fi
+
+[ -z "$default" ] && default="firefox"
+touch /tmp/${default}.lock
+cp /opt/justbrowsing/${default}.cfg /home/user/.config/adeskbar/default.cfg
+echo "selected: $default" >> "$log"

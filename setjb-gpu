@@ -1,0 +1,16 @@
+#!/bin/bash
+
+config="/etc/justbrowsing/data/config"
+
+[ -f "$config" ] &&
+gpu=$(grep ^gpu "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+
+if [ "$1" = "vbox-daemon" ]; then
+  [ "$gpu" = "vbox" ] && VBoxClient-all &
+elif [ "$gpu" = "vbox" ]; then
+  modprobe -a vboxguest vboxsf vboxvideo 2>&1 | tee -a "$restorelog"
+  systemctl start vboxservice.service 2>&1 | tee -a "$restorelog"
+  rm /home/user/.Xresources 2>&1 | tee -a "$restorelog"
+elif [ "$gpu" = "vmware" ]; then
+  systemctl start vmtoolsd.service 2>&1 | tee -a "$restorelog"
+fi

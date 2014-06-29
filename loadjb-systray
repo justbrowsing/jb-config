@@ -1,0 +1,20 @@
+#!/bin/sh
+
+applets=3
+
+batteries=$(ls /sys/class/power_supply/ | wc -l)
+[ "$batteries" -gt 0 ] && applets=$((applets+1))
+
+config="/etc/justbrowsing/data/config"
+keymap=$(grep ^keymap "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+[ -z "$keymap" ] && keymap="us"
+
+if [ "$1" = "--restore" ]; then
+  sleep 0.2
+  nm-applet &
+  pnmixer &
+  jbxkb noquit "$keymap" &
+  [ "$batteries" -gt 0 ] && batterymon -t 24x24_wide &
+else
+  echo "$applets"
+fi

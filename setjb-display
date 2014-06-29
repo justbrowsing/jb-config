@@ -1,0 +1,32 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  display="$1"
+  orientation="$2"
+elif [ -f "$config" ]; then
+  display=$(grep ^display "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+  rotate=$(grep ^rotate "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+[ "$rotate" = "normal" ] && orientation="normal"
+[ "$rotate" = "left" ] && orientation="left"
+[ "$rotate" = "right" ] && orientation="right"
+[ "$rotate" = "inverted" ] && orientation="inverted"
+
+if [ ! -z "$display" -a ! -z "$orientation" ]; then
+  monitor=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
+  xrandr --output "$monitor" --mode "$display" --rotate "$orientation"
+  sed -i '/^display/d' "$config"
+  sed -i '/^rotate/d' "$config"
+  echo "display = ${display}" >> "$config"
+  echo "rotate = ${orientation}" >> "$config"
+elif [ ! -z "$display" ]; then
+  monitor=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
+  xrandr --output "$monitor" --mode "$display"
+  sed -i '/^display/d' "$config"
+  echo "display = ${display}" >> "$config"
+fi
+
+echo "$display $rotate"
+export display rotate
