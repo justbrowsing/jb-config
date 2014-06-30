@@ -1,0 +1,18 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  url="$1"
+elif [ -f "$config" ]; then
+  url=$(grep ^url "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+if [ "$url" = "(none)" ]; then
+  sed -i '/^url/d' "$config"
+elif [ ! -z "$url" ]; then
+  sed -i '/^url/d' "$config"
+  echo "url = ${url}" >> "$config"
+fi
+
+[ ! -z "$url" ] && echo "$url"
+export url

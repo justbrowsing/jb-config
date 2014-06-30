@@ -3,7 +3,7 @@ config="/etc/justbrowsing/data/config"
 
 if [ -f "$config" ]; then
   MOZILLA_LANG=$(grep ^locale "$config" | awk -F = '{print $NF}' | awk '{print $NF}' | sed 's/_/-/g')
-  HOMEPAGE=$(grep ^url "$config" | awk -F = '{print $NF}' | awk '{print $NF}' | sed 's/_/-/g')
+  HOMEPAGE=$(grep ^url "$config" | awk -F = '{print $NF}' | awk '{print $NF}')
   export MOZILLA_LANG HOMEPAGE
 fi
 

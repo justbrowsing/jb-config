@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="0.7" ######
+version="0.8" ######
 ### JustBrowsing ###
 ####################
 
@@ -270,20 +270,35 @@ checkBoxes() {
         </frame>'
 }
 
+############################################################################################
+
+customURL=$(setjb-url 2>/dev/null)
+homepage="$customURL"
+[ -z "$homepage" ] && homepage="(none)"
+
+listURLs() {
+  URLs=("(none)" "https://duckduckgo.com" "http://justbrowsing.info" "$customURL")
+  echo ${URLs[@]} | tr ' ' '\n' | sort -ur | grep -e "^(none)$" -e "^http://" -e "^https://" -e "^file:///"
+}
+
+export customURL homepage
+export -f listURLs
+
 urlEntry() {
   echo '<text><label>Homepage</label></text>
-        <comboboxentry sensitive="false">
+        <comboboxentry>
+          <default>'$homepage'</default>
           <variable>URL</variable>
-          <default>(none)</default>
-          <item>http://justbrowsing.info</item>
-          <item>https://duckduckgo.com</item>
+          <input>bash -c "listURLs"</input>
+          <action>echo "Setting URL: $URL"</action>
+          <action>setjb-url "$URL"</action>
         </comboboxentry>'
 }
 
 ############################################################################################
 
 getDisplay() {
-  resolutions=$(xrandr --current 2>&1 | grep "^   " | awk '{print $1}' | sort -nr)
+  resolutions=$(xrandr --current 2>&1 | grep "^   " | awk '{print $1}' | sed 's/[0-9]$/&p/' | sort -nr | sed 's/p$//')
   if [ "$1" = "gtk" ]; then 
     echo "$resolutions" | awk '{print $1"|"$1}'
   else
@@ -298,12 +313,9 @@ setDisplay() {
 
 export -f getDisplay setDisplay
 
-displayOut=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
-displayState=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $3}' | awk -F + '{print $1}');
-displayActive=$(xrandr --current 2>&1 | grep "*" | awk '{print $1}' | awk NR==1)
+displayState=$(setjb-display | awk '{print $1}' | grep "[0-9]x[0-9]");
 displayList=$(getDisplay 2>&1);
-displaySelect=$(grep -n "$displayState" <(echo "$displayList") | awk -F : '{print $1-1}');
-export displayOut displayActive
+displaySelect=$(grep -n "${displayState}$" <(echo "$displayList") | awk -F : '{print $1-1}');
 
 displayTree() {
   echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|false" selected-row="'$displaySelect'" exported-column="0" rules-hint="true" auto-stort="true" sort-type="1" column-sort-function="1">
@@ -354,7 +366,6 @@ export -f listLocales
 localeState=$(setjb-locale | awk -F : '{print $1}')
 localeList=$(listLocales 2>&1);
 localeSelect=$(grep -n ":${localeState}$" <(echo "$localeList") | awk -F : '{print $1-1}');
-echo "::$localeState : $localeSelect"
 
 localeTree() {
   echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="'$localeSelect'" exported-column="1" rules-hint="true">

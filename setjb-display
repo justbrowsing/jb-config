@@ -26,6 +26,10 @@ elif [ ! -z "$display" ]; then
   xrandr --output "$monitor" --mode "$display"
   sed -i '/^display/d' "$config"
   echo "display = ${display}" >> "$config"
+else
+  current=$(xrandr --current 2>&1 | grep " connected [0-9]")
+  display=$(echo "$current" | awk '{print $3}' | awk -F + '{print $1}');
+  rotate=$(echo "$current" | awk -F "(" '{print $1}' | awk '{print $4}' | grep -v ^$);
 fi
 
 echo "$display $rotate"

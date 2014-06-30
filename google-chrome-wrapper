@@ -3,7 +3,7 @@ config="/etc/justbrowsing/data/config"
 
 if [ -f "$config" ]; then
   LANGUAGE=$(grep ^locale "$config" | awk -F = '{print $NF}' | awk '{print $NF}' | awk -F "-" '{print $1}')
-  HOMEPAGE=$(grep ^url "$config" | awk -F = '{print $NF}' | awk '{print $NF}' | sed 's/_/-/g')
+  HOMEPAGE=$(grep ^url "$config" | awk -F = '{print $NF}' | awk '{print $NF}')
   export LANGUAGE HOMEPAGE
 fi
 
