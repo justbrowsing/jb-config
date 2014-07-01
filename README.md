@@ -8,6 +8,9 @@ JustBrowsing Settings GUI configurator
 More information: http://goo.gl/mzbB5G (Tumblr)
 
 Completed:
+* New: Set default browser
+* New: Detect and set virtual GPU
+* New: Set force clean profile
 * New: Set homepage
 * New: Set keymap 
 * New: Set locale
@@ -21,8 +24,6 @@ Completed:
 To-Do:
 * Save/load printers
 * Save/load networks
-* Set default browser
-* Detect and set virtual GPU
 * Set various kernel parameters
 * Make generic
 * Cleanup code

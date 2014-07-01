@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="0.8" ######
+version="0.9" ######
 ### JustBrowsing ###
 ####################
 
@@ -203,51 +203,84 @@ menuBar() {
 		</menubar>'
 }
 
+############################################################################################
+
+ffRadio="false"
+gcRadio="false"
+[ -f "/tmp/firefox.lock" ] && ffRadio="true"
+[ -f "/tmp/google-chrome.lock" ] && gcRadio="true"
+export ffRadio gcRadio
+
 defaultRadio() {
   echo '<frame>
           <text><label>Default web browser</label></text>
             <hbox homogeneous="true">
-			<radiobutton sensitive="false">
+			<radiobutton>
+                <variable>defaultFF</variable>
                 <label>Firefox</label>
-                <default>true</default>
-			    <variable>Default</variable>
-			    <action>echo</action>
+                <default>'$ffRadio'</default>
+                <action condition="active_is_true(defaultFF)">setjb-default "firefox"</action>
      		</radiobutton>
-			<radiobutton sensitive="false">
+			<radiobutton>
+                <variable>defaultGC</variable>
                 <label>Chrome</label>
-			    <variable>Default</variable>
-			    <action>echo</action>
+                <default>'$gcRadio'</default>
+                <action condition="active_is_true(defaultGC)">setjb-default "chrome"</action>
      		</radiobutton>
             </hbox>
         </frame>'
 }
 
+############################################################################################
+
+realGPU="false"
+qxlGPU="false"
+vboxGPU="false"
+vmGPU="false"
+getVM=$(setjb-gpu 2>/dev/null)
+[ -z "$getVM" ] && realGPU="true"
+[ "$getVM" = "qxl" ] && qxlGPU="true"
+[ "$getVM" = "vbox" ] && vboxGPU="true"
+[ "$getVM" = "vmware" ] && vmGPU="true"
+export realGPU qxlGPU vboxGPU vmGPU
+
 virtualRadio() {
   echo '<frame>
           <text><label>Virtual GPU</label></text>
-			<radiobutton sensitive="false">
+			<radiobutton>
                 <label>none</label>
                 <default>true</default>
-			    <variable>GPU</variable>
-			    <action>echo</action>
+			    <variable>noVM</variable>
+                <default>'$realGPU'</default>
+                <action condition="active_is_true(noVM)">setjb-gpu "none"</action>
      		</radiobutton>
-			<radiobutton sensitive="false">
+			<radiobutton>
                 <label>Spice/QXL</label>
-			    <variable>GPU</variable>
-			    <action>echo</action>
+			    <variable>spice</variable>
+                <default>'$qxlGPU'</default>
+                <action condition="active_is_true(spice)">setjb-gpu "qxl"</action>
      		</radiobutton>
-			<radiobutton sensitive="false">
+			<radiobutton>
                 <label>VirtualBox</label>
-			    <variable>GPU</variable>
-			    <action>echo</action>
+			    <variable>virtualbox</variable>
+                <default>'$vboxGPU'</default>
+                <action condition="active_is_true(virtualbox)">setjb-gpu "vbox"</action>
      		</radiobutton>
-			<radiobutton sensitive="false">
+			<radiobutton>
                 <label>VMware</label>
-			    <variable>GPU</variable>
-			    <action>echo</action>
+			    <variable>vmware</variable>
+                <default>'$vmGPU'</default>
+                <action condition="active_is_true(vmware)">setjb-gpu "vmware"</action>
      		</radiobutton>
         </frame>'
 }
+
+############################################################################################
+
+freshProfile="false"
+getClean=$(setjb-clean 2>/dev/null)
+[ "$getClean" = "true" ] && freshProfile="true"
+export freshProfile
 
 checkBoxes() {
   echo '<frame>
@@ -259,13 +292,15 @@ checkBoxes() {
      		</checkbox>
 			<checkbox sensitive="false">
                 <label>Enable zRAM</label>
+			    <default>true</default>
 			    <variable>zRAM</variable>
 			    <action>echo</action>
      		</checkbox>
-			<checkbox sensitive="false">
+			<checkbox auto-refresh="true">
                 <label>Enable "clean" profiles</label>
-			    <variable>CleanProfiles</variable>
-			    <action>echo</action>
+			    <variable>cleanProfiles</variable>
+                <default>'$freshProfile'</default>
+			    <action>setjb-clean $cleanProfiles</action>
      		</checkbox>
         </frame>'
 }
@@ -525,8 +560,8 @@ zoneTree() {
 }
 ############################################################################################
 
-saveConfig() {
-  tmpFile="/dev/shm/justbrowsing.cfg"
+debugOutput() {
+  tmpFile="/dev/shm/jb-config.debug"
   date > "$tmpFile"
   echo "Display:$Display" >> "$tmpFile"
   echo "Rotate:$Rotate" >> "$tmpFile"
@@ -535,7 +570,7 @@ saveConfig() {
   echo "GPU:$GPU" >> "$tmpFile"
   echo "Copy2RAM:$Copy2RAM" >> "$tmpFile"
   echo "zRAM:$zRAM" >> "$tmpFile"
-  echo "CleanProfiles:$CleanProfiles" >> "$tmpFile"
+  echo "CleanProfiles:$cleanProfiles" >> "$tmpFile"
   echo "URL:$URL" >> "$tmpFile"
   echo "Timezone:$Timezone" >> "$tmpFile"
   echo "Region:$Region" >> "$tmpFile"
@@ -545,7 +580,7 @@ saveConfig() {
   echo "Printer:$Printer" >> "$tmpFile"
   echo "Network:$Network" >> "$tmpFile"
 }
-export -f saveConfig
+export -f debugOutput
 
 
 MAIN_DIALOG='
@@ -597,7 +632,7 @@ MAIN_DIALOG='
   </notebook>
   <hbox>
     <button ok>
-      <action>bash -c "saveConfig 2>/dev/null"</action>
+      <action>savejb-config &</action>
       <action>exit:Quit</action>
     </button>
     <button cancel>

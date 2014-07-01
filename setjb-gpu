@@ -5,12 +5,32 @@ config="/etc/justbrowsing/data/config"
 [ -f "$config" ] &&
 gpu=$(grep ^gpu "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
 
-if [ "$1" = "vbox-daemon" ]; then
-  [ "$gpu" = "vbox" ] && VBoxClient-all &
-elif [ "$gpu" = "vbox" ]; then
-  modprobe -a vboxguest vboxsf vboxvideo 2>&1 | tee -a "$restorelog"
-  systemctl start vboxservice.service 2>&1 | tee -a "$restorelog"
-  rm /home/user/.Xresources 2>&1 | tee -a "$restorelog"
-elif [ "$gpu" = "vmware" ]; then
-  systemctl start vmtoolsd.service 2>&1 | tee -a "$restorelog"
+
+if [ "$1" = "load" -a "$gpu" = "vbox" ]; then
+  modprobe -a vboxguest vboxsf vboxvideo 2>&1
+  systemctl start vboxservice.service 2>&1
+  rm /home/user/.Xresources 2>&1
+elif [ "$1" = "load" -a "$gpu" = "vmware" ]; then
+  systemctl start vmtoolsd.service 2>&1
+elif [ "$1" = "load" -a "$gpu" = "qxl" ]; then
+  echo "qxl: nothing to do" 2>&1
 fi
+
+if [ "$1" = "vbox-daemon" -a "$gpu" = "vbox" ]; then
+  VBoxClient-all &
+elif [ "$1" = "vbox" ]; then
+  input="vbox"
+elif [ "$1" = "qxl" ]; then
+  input="qxl"
+elif [ "$1" = "vmware" ]; then
+  input="vwmare"
+fi
+
+if [ "$1" = "none" ]; then
+  sed -i '/^gpu/d' "$config"
+elif [ ! -z "$input" ]; then
+  sed -i '/^gpu/d' "$config"
+  echo "gpu = ${input}" >> "$config"
+fi
+
+echo "$gpu"

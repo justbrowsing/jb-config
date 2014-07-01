@@ -1,0 +1,10 @@
+[Unit]
+Description=Daemon for savejb-config
+
+[Service]
+ExecStart=savejb-config daemon i3
+ExecStop=rm /tmp/savecfg.daemon
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

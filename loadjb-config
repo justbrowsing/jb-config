@@ -1,13 +1,15 @@
 #!/bin/bash
 ####################
 ### loadconfig #####
-version=0.1 ########
+version=0.2 ########
 ### JustBrowsing ###
 ####################
 
 probeDevice="/dev/disk/by-label/JUSTDATA"
 mntDir="/etc/justbrowsing/mount"
 saveDir="/etc/justbrowsing/data"
+configFile="${saveDir}/config"
+cfgFile="${mntDir}/justbrowsing.cfg"
 
 EXIT_STATUS() { echo "ERROR: $@"; exit 1; }
 
@@ -18,8 +20,8 @@ PARSE_BOOT() {
 OVERRIDE_CONFIG() {
   parameter=$(eval echo \$$1);
   if [ ! -z "$parameter" ]; then
-    sed -i "/^$1/d" ${saveDir}/config
-    echo "$1 = $parameter" >> ${saveDir}/config
+    sed -i "/^$1/d" "$configFile"
+    echo "$1 = $parameter" >> "$configFile"
   fi
 }
 
@@ -30,8 +32,8 @@ if [ -b "$probeDevice" ]; then
   [ "$UID" = "0" ] || EXIT_STATUS "Need to be root"
   mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
   mount -o ro "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
-  [ -f "${mntDir}/justbrowsing.cfg" ] &&
-  cp "${mntDir}/justbrowsing.cfg" "${saveDir}/config" || EXIT_STATUS "unable copy config file"
+  [ -f "$cfgFile" ] &&
+  cp "$cfgFile" "$configFile" || EXIT_STATUS "unable copy config file"
   umount "$mntDir" 2>/dev/null || EXIT_STATUS "unable to unmount $mntDir"
 fi
 

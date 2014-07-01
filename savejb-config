@@ -1,0 +1,83 @@
+#!/bin/bash
+####################
+### saveconfig #####
+version=0.1 ########
+### JustBrowsing ###
+####################
+
+probeDevice="/dev/disk/by-label/JUSTDATA"
+mntDir="/etc/justbrowsing/mount"
+saveDir="/etc/justbrowsing/data"
+configFile="${saveDir}/config"
+cfgFile="${mntDir}/justbrowsing.cfg"
+lockFile="/tmp/savecfg.lock"
+daemon="/tmp/savecfg.daemon"
+
+EXIT_STATUS() { echo "ERROR: $@"; exit 1; }
+
+PARSE_CONFIG() { 
+  grep ^${1} "$configFile" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}';
+}
+
+OVERRIDE_CFG() {
+  parameter=$(eval echo \$$1);
+  if [ ! -z "$parameter" ]; then
+    sed -i "/^$1/d" "$cfgFile"
+    echo "$1 = $parameter" >> "$cfgFile"
+  fi
+}
+
+
+# Request sync
+if [ "$1" = "sync" ]; then
+  rm "$lockFile"
+elif [ "$1" = "daemon" ]; then
+  touch "$daemon"
+  session=$(pgrep -o $2);
+  while [ -n "$session" ] && [ -f "$daemon" ]; do
+    "$0" sync
+    session=$(pgrep -o $2)
+    sleep 0.5
+  done
+else
+  touch "$lockFile"
+  exit 0
+fi
+
+
+# Load config from boot parameters
+export -f PARSE_CONFIG OVERRIDE_CFG
+display=$(PARSE_CONFIG display)
+zone=$(PARSE_CONFIG zone)
+keymap=$(PARSE_CONFIG keymap)
+locale=$(PARSE_CONFIG locale)
+clean=$(PARSE_CONFIG clean)
+gpu=$(PARSE_CONFIG gpu)
+url=$(PARSE_CONFIG url)
+default=$(PARSE_CONFIG default)
+[ "$default" = "google-chrome" ] && default="chrome"
+
+# Load config from persistent storage
+if [ -b "$probeDevice" ]; then
+  [ "$UID" = "0" ] || EXIT_STATUS "Need to be root"
+  mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
+  mount -o ro "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
+  touch "$cfgFile"
+  sed -i 's/^M$//' "$cfgFile"
+  [ -f "$cfgFile" ] || EXIT_STATUS "unable to create $cfgFile"
+  OVERRIDE_CFG display
+  OVERRIDE_CFG zone
+  OVERRIDE_CFG keymap
+  OVERRIDE_CFG locale
+  OVERRIDE_CFG clean
+  OVERRIDE_CFG gpu
+  OVERRIDE_CFG url
+  OVERRIDE_CFG default
+  chown -R user:users "$cfgFile"
+  umount "$mntDir" 2>/dev/null || EXIT_STATUS "unable to unmount $mntDir"
+  echo "==> Saved config to justbrowsing.cfg"
+else
+  echo "==> Notice: config not saved"
+fi
+
+### END ###

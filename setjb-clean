@@ -6,16 +6,28 @@ config="/etc/justbrowsing/data/config"
 clean=$(grep ^clean "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
 
 ### Note: echo -e "[XRE]\nEnableProfileMigrator=false" > /usr/lib/firefox/browser/override.ini ###
-rm -rf $HOME/.mozilla/firefox/*.default
 
-if [ "$clean" = "true" ]; then
+if [ "$1" = "load" -a "$clean" = "true" ]; then
+  rm -rf $HOME/.mozilla/firefox/*.default
   rm -f $HOME/.mozilla/firefox/profiles.ini
   rm -rf $HOME/.mozilla/firefox/oknp3n8p.justbrowsing
   rm -rf $HOME/.config/google-chrome
-else
+elif [ "$1" = "load" ]; then
+  rm -rf $HOME/.mozilla/firefox/*.default
   cd $HOME/.mozilla/firefox
   [ ! -f "profiles.ini" ] && ln -s profiles.jb profiles.ini
   [ ! -d "oknp3n8p.justbrowsing" ] && ln -s firefox.jb oknp3n8p.justbrowsing
   cd $HOME/.config
   [ ! -d "google-chrome" ] && ln -s google-chrome.jb google-chrome
 fi
+
+if [ "$1" = "true" ]; then
+  clean="true"
+  sed -i '/^clean/d' "$config"
+  echo "clean = true" >> "$config"
+elif [ "$1" = "false" ]; then
+  clean="false"
+  sed -i '/^clean/d' "$config"
+fi
+
+echo "$clean"
