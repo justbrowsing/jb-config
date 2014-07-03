@@ -1,5 +1,6 @@
 #!/bin/bash
 
+userDir="/home/user"
 config="/etc/justbrowsing/data/config"
 
 [ -f "$config" ] &&
@@ -8,16 +9,16 @@ clean=$(grep ^clean "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print
 ### Note: echo -e "[XRE]\nEnableProfileMigrator=false" > /usr/lib/firefox/browser/override.ini ###
 
 if [ "$1" = "load" -a "$clean" = "true" ]; then
-  rm -rf $HOME/.mozilla/firefox/*.default
-  rm -f $HOME/.mozilla/firefox/profiles.ini
-  rm -rf $HOME/.mozilla/firefox/oknp3n8p.justbrowsing
-  rm -rf $HOME/.config/google-chrome
+  rm -rf ${userDir}/.mozilla/firefox/*.default
+  rm -f ${userDir}/.mozilla/firefox/profiles.ini
+  rm -rf ${userDir}/.mozilla/firefox/oknp3n8p.justbrowsing
+  rm -rf ${userDir}/.config/google-chrome
 elif [ "$1" = "load" ]; then
-  rm -rf $HOME/.mozilla/firefox/*.default
-  cd $HOME/.mozilla/firefox
+  rm -rf ${userDir}/.mozilla/firefox/*.default
+  cd ${userDir}/.mozilla/firefox
   [ ! -f "profiles.ini" ] && ln -s profiles.jb profiles.ini
   [ ! -d "oknp3n8p.justbrowsing" ] && ln -s firefox.jb oknp3n8p.justbrowsing
-  cd $HOME/.config
+  cd ${userDir}/.config
   [ ! -d "google-chrome" ] && ln -s google-chrome.jb google-chrome
 fi
 

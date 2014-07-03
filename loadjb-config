@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### loadconfig #####
-version=0.2 ########
+version=0.3 ########
 ### JustBrowsing ###
 ####################
 
@@ -27,8 +27,11 @@ OVERRIDE_CONFIG() {
 
 export -f PARSE_BOOT OVERRIDE_CONFIG
 
+# Skip loading config
+skipcfg=$(PARSE_BOOT skipcfg)
+
 # Load config from persistent storage
-if [ -b "$probeDevice" ]; then
+if [ -b "$probeDevice" -a "$skipcfg" != "true" ]; then
   [ "$UID" = "0" ] || EXIT_STATUS "Need to be root"
   mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
   mount -o ro "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"

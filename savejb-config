@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### saveconfig #####
-version=0.1 ########
+version=0.3 ########
 ### JustBrowsing ###
 ####################
 
@@ -21,8 +21,8 @@ PARSE_CONFIG() {
 
 OVERRIDE_CFG() {
   parameter=$(eval echo \$$1);
+  sed -i "/^$1/d" "$cfgFile"
   if [ ! -z "$parameter" ]; then
-    sed -i "/^$1/d" "$cfgFile"
     echo "$1 = $parameter" >> "$cfgFile"
   fi
 }
@@ -35,10 +35,11 @@ elif [ "$1" = "daemon" ]; then
   touch "$daemon"
   session=$(pgrep -o $2);
   while [ -n "$session" ] && [ -f "$daemon" ]; do
-    "$0" sync
+    [ -f "$lockFile" ] && "$0" sync
     session=$(pgrep -o $2)
-    sleep 0.5
+    sleep 15
   done
+  exit 1
 else
   touch "$lockFile"
   exit 0
@@ -47,6 +48,9 @@ fi
 
 # Load config from boot parameters
 export -f PARSE_CONFIG OVERRIDE_CFG
+skipcfg=$(PARSE_BOOT skipcfg)
+[ "$skipcfg" = "true" ] && exit 0
+
 display=$(PARSE_CONFIG display)
 zone=$(PARSE_CONFIG zone)
 keymap=$(PARSE_CONFIG keymap)
@@ -61,7 +65,7 @@ default=$(PARSE_CONFIG default)
 if [ -b "$probeDevice" ]; then
   [ "$UID" = "0" ] || EXIT_STATUS "Need to be root"
   mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
-  mount -o ro "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
+  mount -o rw "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
   touch "$cfgFile"
   sed -i 's/^M$//' "$cfgFile"
   [ -f "$cfgFile" ] || EXIT_STATUS "unable to create $cfgFile"
@@ -73,9 +77,9 @@ if [ -b "$probeDevice" ]; then
   OVERRIDE_CFG gpu
   OVERRIDE_CFG url
   OVERRIDE_CFG default
-  chown -R user:users "$cfgFile"
   umount "$mntDir" 2>/dev/null || EXIT_STATUS "unable to unmount $mntDir"
   echo "==> Saved config to justbrowsing.cfg"
+  notify-send "Synced config"
 else
   echo "==> Notice: config not saved"
 fi

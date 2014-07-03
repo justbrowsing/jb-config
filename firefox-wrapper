@@ -1,4 +1,10 @@
 #!/bin/bash
+#######################
+### firefox-wrapper ###
+#######################
+
+# Place in PATH before /usr/bin
+
 config="/etc/justbrowsing/data/config"
 
 if [ -f "$config" ]; then

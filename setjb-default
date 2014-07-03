@@ -1,6 +1,7 @@
 #!/bin/bash
 
 config="/etc/justbrowsing/data/config"
+adeskbar="/home/user/.config/adeskbar/default.cfg"
 
 if [ ! -z "$1" ]; then
   default="$1"
@@ -21,4 +22,4 @@ elif [ "$default" = "chrome" ]; then
 fi
 
 touch /tmp/${default}.lock
-cp /opt/justbrowsing/${default}.cfg /home/user/.config/adeskbar/default.cfg
+cp /opt/justbrowsing/${default}.cfg "$adeskbar"

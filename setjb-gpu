@@ -5,19 +5,19 @@ config="/etc/justbrowsing/data/config"
 [ -f "$config" ] &&
 gpu=$(grep ^gpu "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
 
-
 if [ "$1" = "load" -a "$gpu" = "vbox" ]; then
-  modprobe -a vboxguest vboxsf vboxvideo 2>&1
-  systemctl start vboxservice.service 2>&1
-  rm /home/user/.Xresources 2>&1
+  modprobe -a vboxguest vboxsf vboxvideo
+  systemctl start vboxservice.service
+
 elif [ "$1" = "load" -a "$gpu" = "vmware" ]; then
-  systemctl start vmtoolsd.service 2>&1
+  systemctl start vmtoolsd.service
 elif [ "$1" = "load" -a "$gpu" = "qxl" ]; then
-  echo "qxl: nothing to do" 2>&1
+  echo "qxl: nothing to do"
 fi
 
 if [ "$1" = "vbox-daemon" -a "$gpu" = "vbox" ]; then
   VBoxClient-all &
+  rm $HOME/.Xresources
 elif [ "$1" = "vbox" ]; then
   input="vbox"
 elif [ "$1" = "qxl" ]; then
