@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=jb-config
+Comment=JustBrowsing GUI to load/save and manage settings
+Exec=jb-config
+Icon=jbconfig
+Categories=GNOME;Utility;
