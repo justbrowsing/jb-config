@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="0.9" ######
+version="1.0" ######
 ### JustBrowsing ###
 ####################
 
@@ -333,7 +333,7 @@ urlEntry() {
 ############################################################################################
 
 getDisplay() {
-  resolutions=$(xrandr --current 2>&1 | grep "^   " | awk '{print $1}' | sed 's/[0-9]$/&p/' | sort -nr | sed 's/p$//')
+  resolutions=$(xrandr 2>&1 | grep "^   " | awk '{print $1}' | sed 's/[0-9]$/&p/' | sort -nr | sed 's/p$//')
   if [ "$1" = "gtk" ]; then 
     echo "$resolutions" | awk '{print $1"|"$1}'
   else
@@ -593,7 +593,7 @@ MAIN_DIALOG='
         <vbox>
           '"`displayTree Display Rotate gtk-fullscreen 175 220`"'
           <hseparator></hseparator>
-          '"`keymapTree Keymap 1 gtk-select-font 185 220`"'
+          '"`keymapTree Keymap 1 gtk-select-font 185 225`"'
         </vbox>
         <vseparator></vseparator>
         <vbox>

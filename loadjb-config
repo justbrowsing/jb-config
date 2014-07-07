@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### loadconfig #####
-version=0.3 ########
+version=0.4 ########
 ### JustBrowsing ###
 ####################
 
@@ -36,7 +36,7 @@ if [ -b "$probeDevice" -a "$skipcfg" != "true" ]; then
   mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
   mount -o ro "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
   [ -f "$cfgFile" ] &&
-  cp "$cfgFile" "$configFile" || EXIT_STATUS "unable copy config file"
+  cp "$cfgFile" "$configFile"
   umount "$mntDir" 2>/dev/null || EXIT_STATUS "unable to unmount $mntDir"
 fi
 

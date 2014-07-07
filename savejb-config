@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### saveconfig #####
-version=0.3 ########
+version=0.5 ########
 ### JustBrowsing ###
 ####################
 
@@ -12,8 +12,10 @@ configFile="${saveDir}/config"
 cfgFile="${mntDir}/justbrowsing.cfg"
 lockFile="/tmp/savecfg.lock"
 daemon="/tmp/savecfg.daemon"
+logFile="/tmp/savecfg.log"
+htmlFile="/tmp/sync.html"
 
-EXIT_STATUS() { echo "ERROR: $@"; exit 1; }
+LOG_STATUS() { echo "ERROR: $@" >> "$logFile"; }
 
 PARSE_CONFIG() { 
   grep ^${1} "$configFile" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}';
@@ -27,6 +29,18 @@ OVERRIDE_CFG() {
   fi
 }
 
+MAKE_HTML() {
+  browserPID=$(pgrep -nx x-www-browser);
+  activeUser=$(ps aux | grep "$browserPID" | grep -v grep | awk '{print $1}');
+  activeDisplay=$(ls --color=none /tmp/.X11-unix/ | sed 's/^X/:/');
+  echo "<html><head><title>Saved :: jb-config</title></head>" > "$htmlFile"
+  echo "<body><h1>Successfully saved justbrowsing.cfg</h1>" >> "$htmlFile"
+  cat "$cfgFile" | sed ':a;N;$!ba;s/\n/<br>\n/g' >> "$htmlFile"
+  [ -f "$logFile" ] &&
+  echo "<h1>The following errors occured:</h1>" >> "$htmlFile" &&
+  cat "$logFile" | sed ':a;N;$!ba;s/\n/<br>\n/g' >> "$htmlFile"
+  echo "</body></html>" >> "$htmlFile"
+}
 
 # Request sync
 if [ "$1" = "sync" ]; then
@@ -48,7 +62,7 @@ fi
 
 # Load config from boot parameters
 export -f PARSE_CONFIG OVERRIDE_CFG
-skipcfg=$(PARSE_BOOT skipcfg)
+skipcfg=$(PARSE_CONFIG skipcfg)
 [ "$skipcfg" = "true" ] && exit 0
 
 display=$(PARSE_CONFIG display)
@@ -63,12 +77,12 @@ default=$(PARSE_CONFIG default)
 
 # Load config from persistent storage
 if [ -b "$probeDevice" ]; then
-  [ "$UID" = "0" ] || EXIT_STATUS "Need to be root"
-  mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
-  mount -o rw "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
+  [ "$UID" = "0" ] || LOG_STATUS "Need to be root"
+  mkdir -p "$mntDir" "$saveDir" || LOG_STATUS "unable to create dirs: $mntDir $saveDir"
+  mount -o rw "$probeDevice" "$mntDir" || LOG_STATUS "unable to mount $probeDevice"
   touch "$cfgFile"
   sed -i 's/^M$//' "$cfgFile"
-  [ -f "$cfgFile" ] || EXIT_STATUS "unable to create $cfgFile"
+  [ -f "$cfgFile" ] || LOG_STATUS "unable to create $cfgFile"
   OVERRIDE_CFG display
   OVERRIDE_CFG zone
   OVERRIDE_CFG keymap
@@ -77,9 +91,10 @@ if [ -b "$probeDevice" ]; then
   OVERRIDE_CFG gpu
   OVERRIDE_CFG url
   OVERRIDE_CFG default
-  umount "$mntDir" 2>/dev/null || EXIT_STATUS "unable to unmount $mntDir"
+  MAKE_HTML
+  umount "$mntDir" 2>/dev/null || LOG_STATUS "unable to unmount $mntDir"
   echo "==> Saved config to justbrowsing.cfg"
-  notify-send "Synced config"
+  su - "$activeUser" -c "DISPLAY=${activeDisplay} /usr/bin/x-www-browser file://${htmlFile}"
 else
   echo "==> Notice: config not saved"
 fi
