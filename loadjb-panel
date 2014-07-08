@@ -77,7 +77,7 @@ spacer4=$(grep -n "\[LAUNCHER/16]" "$adeskbar" 2>/dev/null | awk -F : '{print $1
 sed -i "${spacer4}s/^size=.*/size=$right/g" "$adeskbar"
 
 nitrogen --restore &
-pkill -f "python2 main.py"
+pkill -f "python2 adeskbar.py"
 adeskbar &
 loadjb-systray --restore &
 
