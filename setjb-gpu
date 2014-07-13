@@ -8,7 +8,6 @@ gpu=$(grep ^gpu "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF
 if [ "$1" = "load" -a "$gpu" = "vbox" ]; then
   modprobe -a vboxguest vboxsf vboxvideo
   systemctl start vboxservice.service
-
 elif [ "$1" = "load" -a "$gpu" = "vmware" ]; then
   systemctl start vmtoolsd.service
 elif [ "$1" = "load" -a "$gpu" = "qxl" ]; then
