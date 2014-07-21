@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### saveconfig #####
-version=0.5 ########
+version=0.6 ########
 ### JustBrowsing ###
 ####################
 
@@ -72,6 +72,11 @@ locale=$(PARSE_CONFIG locale)
 clean=$(PARSE_CONFIG clean)
 gpu=$(PARSE_CONFIG gpu)
 url=$(PARSE_CONFIG url)
+backlight=$(PARSE_CONFIG backlight)
+idle=$(PARSE_CONFIG idle)
+volume=$(PARSE_CONFIG volume)
+mouse=$(PARSE_CONFIG mouse)
+touchpad=$(PARSE_CONFIG touchpad)
 default=$(PARSE_CONFIG default)
 [ "$default" = "google-chrome" ] && default="chrome"
 
@@ -90,6 +95,11 @@ if [ -b "$probeDevice" ]; then
   OVERRIDE_CFG clean
   OVERRIDE_CFG gpu
   OVERRIDE_CFG url
+  OVERRIDE_CFG backlight
+  OVERRIDE_CFG idle
+  OVERRIDE_CFG volume
+  OVERRIDE_CFG mouse
+  OVERRIDE_CFG touchpad
   OVERRIDE_CFG default
   MAKE_HTML
   umount "$mntDir" 2>/dev/null || LOG_STATUS "unable to unmount $mntDir"

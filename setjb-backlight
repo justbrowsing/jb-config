@@ -1,0 +1,34 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ "$1" -ge 1 -a "$1" -le 100 ] 2>/dev/null; then
+  backlight="$1"
+elif [ -f "$config" ]; then
+  backlight=$(grep ^backlight "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+selectMethod() {
+  value=$(xbacklight -get 2>/dev/null)
+  if [ ! -z "$value" ]; then
+    xbacklight -set "$1"
+  else
+    xcalib -c -a
+    xcalib -co "$1" -a
+  fi
+}
+
+if [ "$1" = "current" ]; then
+  [ -z "$backlight" ] && backlight="100"
+  echo "$backlight"
+elif [ "$1" = "invert" ]; then
+  xcalib -invert -a
+elif [ "$1" = "reset" ]; then
+  selectMethod "100"
+  sed -i '/^backlight/d' "$config"
+elif [ ! -z "$backlight" ]; then
+  selectMethod "$backlight"
+  sed -i '/^backlight/d' "$config"
+  echo "backlight = ${backlight}" >> "$config"
+fi
+
+export backlight

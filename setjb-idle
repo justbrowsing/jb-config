@@ -1,0 +1,32 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  idle="$1"
+elif [ -f "$config" ]; then
+  idle=$(grep ^idle "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+if [ "$1" = "current" ]; then
+  xset q | grep timeout: | awk '{print $2}'
+elif [ "$1" = "now" ]; then
+  xset +dpms
+  xset dpms force suspend
+elif [ "$1" = "reset" ]; then
+  xset +dpms
+  xset s 600 # 10 minutes
+  sed -i '/^idle/d' "$config"
+elif [ "$idle" = "off" ]; then
+  xset -dpms
+  xset s off
+  sed -i '/^idle/d' "$config"
+  echo "idle = ${idle}" >> "$config"
+elif [ ! -z "$idle" ]; then
+  [ "$2" = "gtk" ] && idle=$((idle*60))
+  xset +dpms
+  xset s "$idle"
+  sed -i '/^idle/d' "$config"
+  echo "idle = ${idle}" >> "$config"
+fi
+
+export idle

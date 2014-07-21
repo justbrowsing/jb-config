@@ -8,12 +8,17 @@ JustBrowsing Settings GUI configurator
 More information: http://goo.gl/mzbB5G (Tumblr)
 
 Completed:
-* New: Set default browser
-* New: Detect and set virtual GPU
-* New: Set force clean profile
-* New: Set homepage
-* New: Set keymap 
-* New: Set locale
+* New: Set backlight level
+* New: Set idle timeout
+* New: Set volume
+* New: Set mouse acceleration
+* New: Toggle touchpad tapping
+* Set default browser
+* Detect and set virtual GPU
+* Set force clean profile
+* Set homepage
+* Set keymap 
+* Set locale
 * Set resolution
 * Set orientation
 * Set timezone
@@ -24,6 +29,7 @@ Completed:
 To-Do:
 * Save/load printers
 * Save/load networks
+* Bug reporting helper
 * Set various kernel parameters
 * Make generic
 * Cleanup code

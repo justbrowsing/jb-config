@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="1.0" ######
+version="1.1" ######
 ### JustBrowsing ###
 ####################
 
@@ -579,14 +579,175 @@ debugOutput() {
   echo "USBprint:$USBprint" >> "$tmpFile"
   echo "Printer:$Printer" >> "$tmpFile"
   echo "Network:$Network" >> "$tmpFile"
+  echo "Backlight:$Backlight" >> "$tmpFile"
+  echo "Audio:$Audio" >> "$tmpFile"
+  echo "Idle:$Idle" >> "$tmpFile"
 }
+
 export -f debugOutput
 
+############################################################################################
+
+getLight=$(setjb-backlight current 2>/dev/null)
+export getLight
+
+refreshLight() {
+  getLight=$(setjb-backlight current 2>/dev/null)
+  [ "$getLight" -ge 1 -a "$getLight" -le 100 ] && echo "$getLight"
+}
+
+lightScale() {
+  echo '<text><label>Screen Backlight (percent)</label></text>
+    <hscale width-request="300" height-request="50" range-min="1" range-max="100" range-step="1">
+      <default>'$getLight'</default>
+      <variable>'$1'</variable>
+      <input>bash -c "refreshLight"</input>
+    </hscale>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo "Setting backlight: $'$1'"</action>
+        <action>setjb-backlight $'$1'</action>
+      </button>
+      <button>
+        <label>Invert</label>
+        <input file stock="gtk-convert"></input>
+        <action>echo "Toggle invert colors"</action>
+        <action>setjb-backlight invert</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo "Resetting backlight: 100"</action>
+        <action>setjb-backlight reset</action>
+        <action function="refresh">'$1'</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+    </hbox>'
+}
+
+export -f refreshLight lightScale
+
+############################################################################################
+
+getIdle=$(setjb-idle current 2>/dev/null)
+[ "$getIdle" -ge "60" ] 2>/dev/null && getIdle=$((getIdle/60))
+export getIdle
+
+refreshIdle() {
+  getIdle=$(setjb-idle current 2>/dev/null)
+  [ "$getIdle" -ge "60" ] 2>/dev/null && getIdle=$((getIdle/60))
+  echo "$getIdle"
+}
+
+timeoutScale() {
+  echo '<text><label>Screen Timeout (minutes)</label></text>
+    <hscale width-request="300" height-request="50" range-min="0" range-max="60" range-step="1">
+      <default>'$getIdle'</default>
+      <variable>'$1'</variable>
+      <input>bash -c "refreshIdle"</input>
+    </hscale>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo "Setting timeout: $'$1' minutes"</action>
+        <action>setjb-idle $'$1' gtk</action>
+        <action function="refresh">'$1'</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+      <button>
+        <label>Disable</label>
+        <input file stock="gtk-stop"></input>
+        <action>echo "Disabling timeout"</action>
+        <action>setjb-idle off</action>
+        <action function="refresh">'$1'</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo "Resetting timeout: 10 minutes"</action>
+        <action>setjb-idle reset</action>
+        <action function="refresh">'$1'</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+    </hbox>'
+}
+
+export -f refreshIdle timeoutScale
+
+############################################################################################
+
+getVolume=$(setjb-volume current 2>/dev/null)
+export getVolume
+
+refreshVolume() {
+  getVolume=$(setjb-volume current 2>/dev/null)
+  [ "$getVolume" -ge 1 -a "$getVolume" -le 100 ] && echo "$getVolume"
+}
+
+volumeScale() {
+  echo '<text><label>Sound volume</label></text>
+    <hscale width-request="300" height-request="50" range-min="0" range-max="400" range-step="1">
+      <default>'$getVolume'</default>
+      <variable>'$1'</variable>
+      <input>bash -c "refreshVolume"</input>
+    </hscale>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo "Setting volume: $'$1'"</action>
+        <action>setjb-volume $'$1'</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo "Resetting volume: 100"</action>
+        <action>setjb-volume reset</action>
+        <action function="refresh">'$1'</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+    </hbox>'
+}
+
+export -f refreshVolume volumeScale
+
+############################################################################################
+
+getMouse=$(setjb-mouse current 2>/dev/null)
+export getMouse
+
+refreshMouse() {
+  getMouse=$(setjb-mouse current 2>/dev/null)
+  echo "$getMouse"
+}
+
+mouseScale() {
+  echo '<text><label>Mouse acceleration</label></text>
+    <hscale width-request="300" height-request="50" range-min="0.01" range-max="4" range-step="0.01">
+      <default>'$getMouse'</default>
+      <variable>'$1'</variable>
+      <input>bash -c "refreshMouse"</input>
+    </hscale>
+    <hbox homogeneous="true">
+      <button use-stock="true" label="gtk-apply">
+        <action>echo "Setting mouse acceleration: $'$1'"</action>
+        <action>setjb-mouse $'$1' gtk</action>
+      </button>
+      <button>
+        <label>Click</label>
+        <input file stock="gtk-select-color"></input>
+        <action>echo "Toggle mousetap"</action>
+        <action>setjb-mouse enabletap</action>
+      </button>
+      <button use-stock="true" label="gtk-revert-to-saved">
+        <action>echo "Resetting mouse acceleration: 2/1 4"</action>
+        <action>setjb-mouse reset</action>
+        <action function="refresh">'$1'</action>
+        <action>grabfocus:'$1'</action>
+      </button>
+    </hbox>'
+}
+
+export -f refreshMouse mouseScale
+
+############################################################################################
 
 MAIN_DIALOG='
 <window title="JustBrowsing Config" icon-name="'$icon'" resizable="false" width-request="'$width'">
 <vbox>
-  <notebook tab-labels="Settings|Advanced">
+  <notebook tab-labels="Settings|Devices|Advanced">
   <vbox label="Settings">
     <frame>
       <hbox>
@@ -612,7 +773,7 @@ MAIN_DIALOG='
     </frame>
   </vbox>
 
-  <vbox label="Advanced">
+  <vbox label="Devices">
     <frame>
       <hbox>
         <vbox>
@@ -629,13 +790,39 @@ MAIN_DIALOG='
       </hbox>
     </frame>
   </vbox>
+
+  <vbox label="Advanced">
+    <frame>
+      <hbox>
+        <edit wrap-mode="3">
+          <input file>/opt/justbrowsing/welcome.txt</input>
+        </edit>
+        <vseparator></vseparator>
+        <vbox>
+          '"`lightScale Backlight`"'
+          <hseparator></hseparator>
+          '"`timeoutScale Idle`"'
+          <hseparator></hseparator>
+          '"`mouseScale Cursor`"'
+          <hseparator></hseparator>
+          '"`volumeScale Audio`"'
+          <hseparator></hseparator>
+        </vbox>
+      </hbox>
+    </frame>
+  </vbox>
+
   </notebook>
   <hbox>
-    <button ok>
+    <button>
+      <label>Save</label>
+      <input file stock="gtk-save"></input>
       <action>savejb-config &</action>
       <action>exit:Quit</action>
     </button>
-    <button cancel>
+    <button>
+      <label>Quit</label>
+      <input file stock="gtk-quit"></input>
       <action>exit:Quit</action>
     </button>
     <button help>

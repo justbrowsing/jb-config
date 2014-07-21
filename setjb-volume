@@ -1,0 +1,25 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  volume="$1"
+elif [ -f "$config" ]; then
+  volume=$(grep ^volume "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+if [ "$1" = "current" ]; then
+  pamixer --get-volume
+elif [ "$1" = "reset" ]; then
+  pamixer --set-volume 100
+  sed -i '/^volume/d' "$config"
+elif [ "$volume" = "off" ]; then
+  pamixer --set-volume 0
+  sed -i '/^volume/d' "$config"
+  echo "volume = ${volume}" >> "$config"
+elif [ ! -z "$volume" ]; then
+  pamixer --set-volume "$volume" --allow-boost
+  sed -i '/^volume/d' "$config"
+  echo "volume = ${volume}" >> "$config"
+fi
+
+export volume

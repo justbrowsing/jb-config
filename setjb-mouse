@@ -1,0 +1,32 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  mouse="$1"
+  touchpad="$1"
+elif [ -f "$config" ]; then
+  mouse=$(grep ^mouse "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+  touchpad=$(grep ^touchpad "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+synaptics=$(which synclient 2>/dev/null)
+
+if [ "$1" = "current" ]; then
+  xset q | grep acceleration: | awk '{print $2}' | awk -F "/" '{print ($1/$2)}'
+elif [ "$1" = "reset" ]; then
+  [ ! -z "$synaptics" ] && synclient TapButton1=0 TapButton2=0 TapButton3=0
+  xset m default
+  sed -i '/^mouse/d' "$config"
+  sed -i '/^touchpad/d' "$config"
+elif [ "$touchpad" = "enabletap" ]; then
+  [ ! -z "$synaptics" ] && synclient TapButton1=1 TapButton2=3 TapButton3=2
+  sed -i '/^touchpad/d' "$config"
+  echo "touchpad = ${touchpad}" >> "$config"
+elif [ ! -z "$mouse" ]; then
+  [ "$2" = "gtk" ] && mouse=$(echo "$mouse" | awk '{print ($1*100)"/100"}');
+  xset m "$mouse"
+  sed -i '/^mouse/d' "$config"
+  echo "mouse = ${mouse}" >> "$config"
+fi
+
+export mouse touchpad
