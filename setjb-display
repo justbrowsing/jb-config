@@ -14,7 +14,13 @@ fi
 [ "$rotate" = "right" ] && orientation="right"
 [ "$rotate" = "inverted" ] && orientation="inverted"
 
-if [ ! -z "$display" -a ! -z "$orientation" ]; then
+if [ "$1" = "current" ]; then
+  shift
+  resolutions=$(xrandr 2>&1 | grep "^   " | awk '{print $1}' | sed 's/[0-9]$/&p/' | sort -nr | sed 's/p$//')
+  [ "$1" != "gtk" ] && echo "$resolutions"
+  [ "$1" = "gtk" ] && echo "$resolutions" | awk '{print $1"|"$1}'
+  exit 0
+elif [ ! -z "$display" -a ! -z "$orientation" ]; then
   monitor=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
   xrandr --output "$monitor" --mode "$display" --rotate "$orientation"
   sed -i '/^display/d' "$config"

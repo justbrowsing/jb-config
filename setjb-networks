@@ -1,0 +1,43 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ ! -z "$1" ]; then
+  network="$1"
+elif [ -f "$config" ]; then
+  network=$(grep ^network "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+fi
+
+netDel="/dev/shm/.nm-blacklist"
+netSaved="/etc/NetworkManager/system-connections/"
+export netDel netSaved
+
+listNetworks() {
+  if [ -f "$netDel" -a -d "$netSaved" ]; then
+    diff -y --suppress-common-lines <(ls --color=none "$netSaved") <(cat "$netDel" | sort) | awk -F "\t" '{print $1}'
+  else
+    ls --color=none "$netSaved"
+  fi
+}
+
+saveNetworks() {
+  echo;
+}
+
+if [ "$1" = "current" ]; then
+  listNetworks
+elif [ "$1" = "reset" ]; then
+  > "$netDel"
+  sed -i '/^network/d' "$config"
+elif [ "$1" = "delete" ]; then
+  shift
+  echo "$@" >> "$netDel"
+  saveNetworks
+  sed -i '/^network/d' "$config"
+  echo "network = ${network}" >> "$config"
+elif [ ! -z "$network" ]; then
+  saveNetworks
+  sed -i '/^network/d' "$config"
+  echo "network = ${network}" >> "$config"
+fi
+
+export network
