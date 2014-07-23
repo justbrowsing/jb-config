@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="1.2" ######
+version="1.3" ######
 ### JustBrowsing ###
 ####################
 
@@ -11,12 +11,17 @@ icon="gnome-control-center"
 
 ############################################################################################
 
-defaultBrand=$(setjb-printers current 2>/dev/null | awk NR==1)
-export defaultBrand
+printerStatus=$(setjb-printers current 2>/dev/null)
+defaultBrand=$(echo "$printerStatus" | awk NR==1)
+printRow=$(echo "$printerStatus" | awk NR==2)
+export defaultBrand printRow
 
 refreshPrinters() {
-  getPrinters=$(setjb-printers current 2>/dev/null)
-  echo "$getPrinters" | sed '1d'
+  printerStatus=$(setjb-printers current 2>/dev/null)
+  defaultBrand=$(echo "$printerStatus" | awk NR==1)
+  printRow=$(echo "$printerStatus" | awk NR==2)
+  getPrinters=$(echo "$printerStatus" | sed '1,2d')
+  echo "$getPrinters"
 }
 
 printerTree() {
@@ -42,6 +47,11 @@ printerTree() {
         <action>setjb-printers install $'$2' $'$1'</action>
         <action function="refresh">SavedPrinters</action>
       </button>
+      <button>
+        <label>Refresh</label>
+        <input file stock="gtk-refresh"></input>
+        <action function="refresh">USBprint</action>
+      </button>
       <text><label>Printer brand:</label></text>
       <comboboxtext space-expand="true" space-fill="true">
         <variable>'$3'</variable>
@@ -50,10 +60,7 @@ printerTree() {
         <action>echo PrinterOEM: $'$3'</action>
         <action function="refresh">'$2'</action>
       </comboboxtext>
-    </hbox>
-    <timer visible="false">
-      <action condition="command_is_true([ $nbk -eq 1 ] && echo true)">refresh:USBprint</action>
-    </timer>'
+    </hbox>'
 }
 
 knownPrinterTree() {
@@ -65,11 +72,16 @@ knownPrinterTree() {
       <input>setjb-printers saved</input>
     </tree>
     <hbox homogeneous="true">
-      <button use-stock="true" label="gtk-home">
+      <button>
+        <label>Set default</label>
+        <input file stock="gtk-home"></input>
         <action>setjb-printers default $'$1'</action>
         <action function="refresh">'$1'</action>
       </button>
-      <button use-stock="true" label="gtk-delete">
+      <button>
+        <label>Uninstall</label>
+        <input file stock="gtk-delete"></input>
+        <action>echo "Forgetting saved printer: $'$1'"</action>
         <action>setjb-printers delete $'$1'</action>
         <action function="refresh">'$1'</action>
       </button>

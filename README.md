@@ -8,6 +8,7 @@ JustBrowsing Settings GUI configurator
 More information: http://goo.gl/mzbB5G (Tumblr)
 
 Completed:
+* New: Save/load printers
 * New: Set backlight level
 * New: Set idle timeout
 * New: Set volume
@@ -27,7 +28,6 @@ Completed:
 * Remove saved networks
 
 To-Do:
-* Save/load printers
 * Save/load networks
 * Bug reporting helper
 * Set various kernel parameters

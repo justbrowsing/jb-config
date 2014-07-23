@@ -1,10 +1,8 @@
 #!/bin/bash
 config="/etc/justbrowsing/data/config"
 
-if [ ! -z "$1" ]; then
-  printer="$1"
-elif [ -f "$config" ]; then
-  printer=$(grep ^printer "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+if [ -f "$config" ]; then
+  printers=$(grep ^printer "$config" 2>/dev/null | sed -e "s/^printer = //" -e "s/^printer=//")
 fi
 
 queryPrinters() {
@@ -14,13 +12,12 @@ queryPrinters() {
   ShortName=$(echo "$USB" | awk -F "|" '{print $2}');
   defaultBrand=$(echo "$Brand" | awk NR==1);
   [ -z "$defaultBrand" ] && defaultBrand="(none)";
-}
-
-queryDrivers() {
-  PPDs=$(grep "<printer " /usr/share/gutenprint/*/xml/printers.xml | sort | grep -o -e "<printer " -e 'name=[^=]*"' -e 'manufacturer=[^=]*"' -e 'driver=[^=]*"' | sed -e 's/name="/|/g' -e 's/driver="/|/g' -e 's/manufacturer="/|/g');
+  PPDs=$(grep "<printer " /usr/share/gutenprint/*/xml/printers.xml | sort);
+  PPDs=$(echo "$PPDs" | grep -o -e "<printer " -e 'name=[^=]*"' -e 'manufacturer=[^=]*"' -e 'driver=[^=]*"' | sed -e 's/name="/|/g' -e 's/driver="/|/g' -e 's/manufacturer="/|/g');
   Models=$(echo $PPDs | sed -e 's/<printer |/\n/g' -e 's/" |/|/g' -e 's/" //g' -e 's/"//g' | awk -F "|" '{print $3"|"$1"|"$2}');
   OEMs=$(echo "$Models" | awk -F "|" '{print $1}' | sort -u | sed -e 's/^$/none/g');
   printRow=$(echo "$Models" | grep "^${defaultBrand}" | awk -F "|" '{print $2}' | grep -n "${ShortName}" | awk -F ":" '{print $1-1}');
+  [ -z "$printRow" ] && printRow="0"
 }
 
 listPrinters() {
@@ -32,7 +29,7 @@ listPrinters() {
 }
 
 listDrivers() { 
-  if [ -z "$1" ]; then
+  if [ -z "$1" -a "$defaultBrand" != "(none)" ]; then
     echo "$Models" | grep -i "^${defaultBrand}" | awk -F "|" '{print $1"|"$2"|"$2"|"$3}'
   elif [ "$1" = "OEM" ]; then
     echo "$OEMs"
@@ -44,10 +41,12 @@ listDrivers() {
 }
 
 installPrinter() {
-  Driver=$(find /usr/share/cups/ -name "*$1*ppd*");
+  Driver="$1"
+  [ ! -f "$Driver" ] && Driver=$(find /usr/share/cups/ -name "*$1*ppd*" | awk NR==1);
   shift;
+  Interface="$1"
   LineInt=$(echo "$1" | sed -e 's/Printer#//' -e 's/ //g');
-  Interface=$(echo "$DeviceIDs" | awk -v line=$LineInt NR==line);
+  [ "$LineInt" -ge 0 ] 2>/dev/null && Interface=$(echo "$DeviceIDs" | awk -v line=$LineInt NR==line);
   shift;
   printName=$(echo "$@" | sed 's/ /_/g');
   lprm -
@@ -72,35 +71,48 @@ getPrinters() {
   echo "$treePrint"
 }
 
-
 if [ "$1" = "current" ]; then
   queryPrinters
   echo "$defaultBrand"
+  echo "$printRow"
   listPrinters
 elif [ "$1" = "saved" ]; then
   getPrinters
+elif [ "$1" = "load" ]; then
+  IFS=$(echo -en "\n\b");
+  for machine in $printers; do
+    printName=$(echo "$machine" | awk -F "|" '{print $1}' | sed 's/^~//');
+    Interface=$(echo "$machine" | awk -F "|" '{print $2}');
+    Driver=$(echo "$machine" | awk -F "|" '{print $3}');
+    installPrinter "$Driver" "$Interface" "$printName"
+  done
 elif [ "$1" = "install" ]; then
   shift
   queryPrinters
   installPrinter "$@"
-  sed -i '/^printer/d' "$config"
-  echo "printer = ${printer}" >> "$config"
+  sed -i -e "s/^printer = ~/printer = /" -e "s/^printer=~/printer=/" "$config"
+  sed -i -e "/^printer = ${printName}/d" -e "/^printer=${printName}/d" "$config"
+  echo "printer = ~${printName}|${Interface}|${Driver}" >> "$config"
 elif [ "$1" = "delete" ]; then
   shift
+  printer="$1"
   lprm -
-  cupsreject "$1"
-  cupsdisable "$1"
-  lpadmin -x "$1"
-  sed -i '/^printer/d' "$config"
-  echo "printer = ${printer}" >> "$config"
+  cupsreject "$printer"
+  cupsdisable "$printer"
+  lpadmin -x "$printer"
+  sed -i -e "/^printer = ~${printer}/d" -e "/^printer=~${printer}/d" "$config"
+  sed -i -e "/^printer = ${printer}/d" -e "/^printer=${printer}/d" "$config"
+  countPrinters=$(lpstat -s 2>/dev/null | grep "^device " | wc -l)
+  [ "$countPrinters" -eq 1 ] && sed -i -e "s/^printer = ~/printer = /" -e "s/^printer=~/printer=/" "$config"
+  [ "$countPrinters" -eq 1 ] && sed -i -e "s/^printer = /printer = ~/" -e "s/^printer=/printer=~/" "$config"
 elif [ "$1" = "default" ]; then
   shift
-  lpoptions -d "$1"
-  sed -i '/^printer/d' "$config"
-  echo "printer = ${printer}" >> "$config"
+  printer="$1"
+  lpoptions -d "$printer"
+  sed -i -e "s/^printer = ~/printer = /" -e "s/^printer=~/printer=/" "$config"
+  sed -i -e "s/^printer = $printer/printer = ~$printer/" -e "s/^printer=$printer/printer=~$printer/" "$config"
 else
   queryPrinters
-  queryDrivers
   listDrivers "$1"
 fi
 
