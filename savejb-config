@@ -86,7 +86,7 @@ mouse=$(PARSE_CONFIG mouse)
 touchpad=$(PARSE_CONFIG touchpad)
 default=$(PARSE_CONFIG default)
 [ "$default" = "google-chrome" ] && default="chrome"
-printer=$(MULITPARSE_CONFIG printer)
+printer=$(MULTIPARSE_CONFIG printer)
 
 # Load config from persistent storage
 if [ -b "$probeDevice" ]; then
