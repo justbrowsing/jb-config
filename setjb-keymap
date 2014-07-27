@@ -2,17 +2,42 @@
 
 config="/etc/justbrowsing/data/config"
 
-if [ ! -z "$1" ]; then
-  keymap="$1"
-elif [ -f "$config" ]; then
+if [ -f "$config" ]; then
   keymap=$(grep ^keymap "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+  layout="$keymap"
 fi
 
-[ -z "$keymap" ] && keymap="us"
-echo "$keymap"
-sed -i '/^keymap/d' "$config"
-echo "keymap = ${keymap}" >> "$config"
+if [ ! -z "$1" ]; then
+  keymap="$1"
+fi
 
-export keymap
-pkill -f jbxkb
-jbxkb noquit "$keymap" &
+layouts=('US (Intl):us(intl)' 'US (Dvorak):us(dvorak)' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'British:gb'  'Bulgarian:bg' 'Catalan:ca' 'Chinese Pinyin:cn' 'Chinese Cangjie:tw' 'Croatian:hr' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:gr' 'Hebrew:il' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese (skk):jp' 'Korean (romaja):kr' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:se' 'Thai (kesmanne):th' 'Turkish:tr' 'US (Qwerty):us' 'Vietnamese (tcvn):vn')
+
+listKeymaps() {
+  [ -z "$layout" ] && layout="us"
+  name=$(echo "${layouts[@]}" | sed 's/$/ /' | grep -o -e "\S*[A-Za-z] (\b[A-Za-z]\S*:${layout} " -e "\b[A-Z]\S*:${layout} " | sed -e 's/ $//' | awk -F : '{print $1}')
+  [ "$1" = "gtk" ] && echo "${name}|${name}|${layout} (•)"
+
+  IFS=$(echo -en "\n\b");
+  for i in ${layouts[@]}; do
+    if [ "$1" = "gtk" ]; then
+      echo "$i" | awk -F : '{print $1"|"$1"|"$2}';
+    else
+      echo "$i"
+    fi
+  done
+}
+
+[[ "$keymap" = *•* ]] && keymap=$(echo "$keymap" | awk -F " (•)" '{print $1}');
+
+if [ -z "$1" ]; then
+  xkb-switch 2>&1
+elif [ "$1" = "list" ]; then
+  shift
+  listKeymaps "$@"
+else
+  pkill -f jbxkb
+  jbxkb noquit "$keymap" &
+  sed -i '/^keymap/d' "$config"
+  echo "keymap = ${keymap}" >> "$config"
+fi

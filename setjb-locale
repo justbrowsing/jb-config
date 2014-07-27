@@ -1,17 +1,45 @@
 #!/bin/bash
 config="/etc/justbrowsing/data/config"
 
-if [ ! -z "$1" ]; then
-  locale="$1"
-elif [ -f "$config" ]; then
+if [ -f "$config" ]; then
   locale=$(grep ^locale "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+  lang="$locale"
 fi
 
-[ -z "$locale" ] && locale="en_US"
+if [ ! -z "$1" ]; then
+  locale="$1"
+fi
+
+languages=('Afrikaans:af' 'Amharic:am' 'Arabic:ar' 'Belarusian:be' 'Breton:br' 'Bulgarian:bg' 'Catalan:ca' 'Chinese (Mainland):zh_CN' 'Chinese (Taiwan):zh_TW' 'Croatian:hr' 'Dutch:nl' 'English (GB):en_GB' 'English (US):en_US' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:el' 'Hebrew:he' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Korean:ko' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:sv' 'Thai:th' 'Turkish:tr' 'Vietnamese:vi')
+
+listLocales() {
+  [ -z "$lang" ] && lang="en_US"
+  name=$(echo "${languages[@]}" | grep -o -e "\S*[a-z] (\b[A-Z]\S*:${lang}" -e "\b[A-Z]\S*:${lang}" | awk -F : '{print $1}')
+  [ "$1" = "gtk" ] && echo "${name}|${name}|${lang} (•)"
+
+  IFS=$(echo -en "\n\b");
+  for i in ${languages[@]}; do
+    if [ "$1" = "gtk" ]; then
+      echo "$i" | awk -F : '{print $1"|"$1"|"$2}';
+    else
+      echo "$i"
+    fi
+  done;
+}
+
+[[ "$locale" = *•* ]] && locale=$(echo "$locale" | awk -F " (•)" '{print $1}');
 LANGUAGE=$(echo "$locale" | awk -F "-" '{print $1}');
 MOZILLA_LANG=$(echo "$locale" | sed 's/_/-/g')
 
-echo $LANGUAGE:$MOZILLA_LANG
-sed -i '/^locale/d' "$config"
-echo "locale = ${LANGUAGE}" >> "$config"
-export LANGUAGE MOZILLA_LANG
+if [ -z "$1" ]; then
+  [ -z "$LANGUAGE" ] && LANGUAGE="en_US"
+  [ -z "$MOZILLA_LANG" ] && MOZILLA_LANG="en-US"
+  echo $LANGUAGE:$MOZILLA_LANG
+elif [ "$1" = "list" ]; then
+  shift
+  listLocales "$@"
+else
+  sed -i '/^locale/d' "$config"
+  echo "locale = ${LANGUAGE}" >> "$config"
+  export LANGUAGE MOZILLA_LANG
+fi

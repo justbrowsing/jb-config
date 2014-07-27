@@ -9,7 +9,14 @@ fi
 
 if [ "$1" = "current" ]; then
   pamixer --get-volume
+elif [ "$1" = "status" ]; then
+  pamixer --get-mute
+elif [ "$1" = "mute" ]; then
+  pamixer --mute
+elif [ "$1" = "unmute" ]; then
+  pamixer --unmute
 elif [ "$1" = "reset" ]; then
+  pamixer --unmute
   pamixer --set-volume 100
   sed -i '/^volume/d' "$config"
 elif [ "$volume" = "off" ]; then

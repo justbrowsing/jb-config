@@ -38,7 +38,7 @@ OVERRIDE_CFG() {
 
 MAKE_HTML() {
   browserPID=$(pgrep -nx x-www-browser);
-  activeUser=$(ps aux | grep "$browserPID" | grep -v grep | awk '{print $1}');
+  activeUser=$(ps aux | grep "$browserPID" | grep -v grep | awk '{print $1}' | grep -v root | awk NR==1);
   activeDisplay=$(ls --color=none /tmp/.X11-unix/ | sed 's/^X/:/');
   echo "<html><head><title>Saved :: jb-config</title></head>" > "$htmlFile"
   echo "<body><h1>Successfully saved justbrowsing.cfg</h1>" >> "$htmlFile"

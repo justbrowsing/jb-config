@@ -7,14 +7,77 @@ elif [ -f "$config" ]; then
   zone=$(grep ^zone "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
 fi
 
-[ -z "$zone" ] && zone="America/Los_Angeles"
-sanitycheck=$(timedatectl list-timezones | grep ^${zone}$ | wc -l);
+Africa=('Accra' 'Addis_Ababa' 'Algiers' 'Asmara' 'Bamako' 'Bangui' 'Banjul' 'Bissau' 'Blantyre' 'Brazzaville' 'Bujumbura' 'Cairo' 'Casablanca' 'Ceuta' 'Conakry' 'Dakar' 'Dar_es_Salaam' 'Djibouti' 'Douala' 'El_Aaiun' 'Freetown' 'Gaborone' 'Harare' 'Johannesburg' 'Juba' 'Kampala' 'Khartoum' 'Kigali' 'Kinshasa' 'Lagos' 'Libreville' 'Lome' 'Luanda' 'Lubumbashi' 'Lusaka' 'Malabo' 'Maputo' 'Maseru' 'Mbabane' 'Mogadishu' 'Monrovia' 'Nairobi' 'Ndjamena' 'Niamey' 'Nouakchott' 'Ouagadougou' 'Porto-Novo' 'Sao_Tome' 'Tripoli' 'Tunis' 'Windhoek')
+America=('Adak' 'Anchorage' 'Anguilla' 'Antigua' 'Araguaina' 'Argentina/Buenos_Aires' 'Argentina/Catamarca' 'Argentina/Cordoba' 'Argentina/Jujuy' 'Argentina/La_Rioja' 'Argentina/Mendoza' 'Argentina/Rio_Gallegos' 'Argentina/Salta' 'Argentina/San_Juan' 'Argentina/San_Luis' 'Argentina/Tucuman' 'Argentina/Ushuaia' 'Aruba' 'Asuncion' 'Atikokan' 'Bahia' 'Bahia_Banderas' 'Barbados' 'Belem' 'Belize' 'Blanc-Sablon' 'Boa_Vista' 'Bogota' 'Boise' 'Cambridge_Bay' 'Campo_Grande' 'Cancun' 'Caracas' 'Cayenne' 'Cayman' 'Chicago' 'Chihuahua' 'Costa_Rica' 'Creston' 'Cuiaba' 'Curacao' 'Danmarkshavn' 'Dawson' 'Dawson_Creek' 'Denver' 'Detroit' 'Dominica' 'Edmonton' 'Eirunepe' 'El_Salvador' 'Fortaleza' 'Glace_Bay' 'Godthab' 'Goose_Bay' 'Grand_Turk' 'Grenada' 'Guadeloupe' 'Guatemala' 'Guayaquil' 'Guyana' 'Halifax' 'Havana' 'Hermosillo' 'Indiana/Indianapolis' 'Indiana/Knox' 'Indiana/Marengo' 'Indiana/Petersburg' 'Indiana/Tell_City' 'Indiana/Vevay' 'Indiana/Vincennes' 'Indiana/Winamac' 'Inuvik' 'Iqaluit' 'Jamaica' 'Juneau' 'Kentucky/Louisville' 'Kentucky/Monticello' 'Kralendijk' 'La_Paz' 'Lima' 'Los_Angeles' 'Lower_Princes' 'Maceio' 'Managua' 'Manaus' 'Marigot' 'Martinique' 'Matamoros' 'Mazatlan' 'Menominee' 'Merida' 'Metlakatla' 'Mexico_City' 'Miquelon' 'Moncton' 'Monterrey' 'Montevideo' 'Montserrat' 'Nassau' 'New_York' 'Nipigon' 'Nome' 'Noronha' 'North_Dakota/Beulah' 'North_Dakota/Center' 'North_Dakota/New_Salem' 'Ojinaga' 'Panama' 'Pangnirtung' 'Paramaribo' 'Phoenix' 'Port-au-Prince' 'Port_of_Spain' 'Porto_Velho' 'Puerto_Rico' 'Rainy_River' 'Rankin_Inlet' 'Recife' 'Regina' 'Resolute' 'Rio_Branco' 'Santa_Isabel' 'Santarem' 'Santiago' 'Santo_Domingo' 'Sao_Paulo' 'Scoresbysund' 'Sitka' 'St_Barthelemy' 'St_Johns' 'St_Kitts' 'St_Lucia' 'St_Thomas' 'St_Vincent' 'Swift_Current' 'Tegucigalpa' 'Thule' 'Thunder_Bay' 'Tijuana' 'Toronto' 'Tortola' 'Vancouver' 'Whitehorse' 'Winnipeg' 'Yakutat' 'Yellowknife')
+Antarctica=('Casey' 'Davis' 'DumontDUrville' 'Macquarie' 'Mawson' 'McMurdo' 'Palmer' 'Rothera' 'Syowa' 'Vostok')
+Arctic=('Longyearbyen')
+Asia=('Aden' 'Almaty' 'Amman' 'Anadyr' 'Aqtau' 'Aqtobe' 'Ashgabat' 'Baghdad' 'Bahrain' 'Baku' 'Bangkok' 'Beirut' 'Bishkek' 'Brunei' 'Choibalsan' 'Chongqing' 'Colombo' 'Damascus' 'Dhaka' 'Dili' 'Dubai' 'Dushanbe' 'Gaza' 'Harbin' 'Hebron' 'Ho_Chi_Minh' 'Hong_Kong' 'Hovd' 'Irkutsk' 'Jakarta' 'Jayapura' 'Jerusalem' 'Kabul' 'Kamchatka' 'Karachi' 'Kashgar' 'Kathmandu' 'Khandyga' 'Kolkata' 'Krasnoyarsk' 'Kuala_Lumpur' 'Kuching' 'Kuwait' 'Macau' 'Magadan' 'Makassar' 'Manila' 'Muscat' 'Nicosia' 'Novokuznetsk' 'Novosibirsk' 'Omsk' 'Oral' 'Phnom_Penh' 'Pontianak' 'Pyongyang' 'Qatar' 'Qyzylorda' 'Rangoon' 'Riyadh' 'Sakhalin' 'Samarkand' 'Seoul' 'Shanghai' 'Singapore' 'Taipei' 'Tashkent' 'Tbilisi' 'Tehran' 'Thimphu' 'Tokyo' 'Ulaanbaatar' 'Urumqi' 'Ust-Nera' 'Vientiane' 'Vladivostok' 'Yakutsk' 'Yekaterinburg' 'Yerevan')
+Atlantic=('Azores' 'Bermuda' 'Canary' 'Cape_Verde' 'Faroe' 'Madeira' 'Reykjavik' 'South_Georgia' 'St_Helena' 'Stanley')
+Australia=('Adelaide' 'Brisbane' 'Broken_Hill' 'Currie' 'Darwin' 'Eucla' 'Hobart' 'Lindeman' 'Lord_Howe' 'Melbourne' 'Perth' 'Sydney')
+Europe=('Amsterdam' 'Andorra' 'Athens' 'Belgrade' 'Berlin' 'Bratislava' 'Brussels' 'Bucharest' 'Budapest' 'Busingen' 'Chisinau' 'Copenhagen' 'Dublin' 'Gibraltar' 'Guernsey' 'Helsinki' 'Isle_of_Man' 'Istanbul' 'Jersey' 'Kaliningrad' 'Kiev' 'Lisbon' 'Ljubljana' 'London' 'Luxembourg' 'Madrid' 'Malta' 'Mariehamn' 'Minsk' 'Monaco' 'Moscow' 'Oslo' 'Paris' 'Podgorica' 'Prague' 'Riga' 'Rome' 'Samara' 'San_Marino' 'Sarajevo' 'Simferopol' 'Skopje' 'Sofia' 'Stockholm' 'Tallinn' 'Tirane' 'Uzhgorod' 'Vaduz' 'Vatican' 'Vienna' 'Vilnius' 'Volgograd' 'Warsaw' 'Zagreb' 'Zaporozhye' 'Zurich')
+Indian=('Antananarivo' 'Chagos' 'Christmas' 'Cocos' 'Comoro' 'Kerguelen' 'Mahe' 'Maldives' 'Mauritius' 'Mayotte' 'Reunion')
+Pacific=('Apia' 'Auckland' 'Chatham' 'Chuuk' 'Easter' 'Efate' 'Enderbury' 'Fakaofo' 'Fiji' 'Funafuti' 'Galapagos' 'Gambier' 'Guadalcanal' 'Guam' 'Honolulu' 'Johnston' 'Kiritimati' 'Kosrae' 'Kwajalein' 'Majuro' 'Marquesas' 'Midway' 'Nauru' 'Niue' 'Norfolk' 'Noumea' 'Pago_Pago' 'Palau' 'Pitcairn' 'Pohnpei' 'Port_Moresby' 'Rarotonga' 'Saipan' 'Tahiti' 'Tarawa' 'Tongatapu' 'Wake' 'Wallis')
 
-if [ "$sanitycheck" = 1 ]; then
+printRegion() {
+  input=("${!1}")
+  input=("${zoneRegion}/${zoneCity} (•)" "${input[@]}");
+
+  region=${#input[@]}
+  index=0
+  while [ "$index" -lt "$region" ] 2>/dev/null; do
+    cityname=$(echo "${input[$index]}" | sed 's/_/ /g')
+    echo "${cityname}||${input[$index]}"
+    index=$((index+1))
+  done;
+}
+
+listZones() {
+  if [ -z "$1" ]; then
+    printRegion $zoneRegion[@]
+  elif [ "$1" = "Africa" ]; then
+    printRegion Africa[@]
+  elif [ "$1" = "America" ]; then
+    printRegion America[@]
+  elif [ "$1" = "Antarctica" ]; then
+    printRegion Antarctica[@]
+  elif [ "$1" = "Arctic" ]; then
+    printRegion Arctic[@]
+  elif [ "$1" = "Asia" ]; then
+    printRegion Asia[@]
+  elif [ "$1" = "Atlantic" ]; then
+    printRegion Atlantic[@]
+  elif [ "$1" = "Australia" ]; then
+    printRegion Australia[@]
+  elif [ "$1" = "Europe" ]; then
+    printRegion Europe[@]
+  elif [ "$1" = "Indian" ]; then
+    printRegion Indian[@]
+  elif [ "$1" = "Pacific" ]; then
+    printRegion Pacific[@]
+  fi
+}
+
+
+getZone=$(timedatectl status 2>/dev/null | grep -e "Time zone:" -e "Timezone:" | awk '{print $3}');
+zoneRegion=$(echo "$getZone" | cut -d / -f 1);
+zoneCity=$(echo "$getZone" | cut -d / -f 1 --complement);
+
+[[ "$zone" = *•* ]] && zone=$(echo "$zone" | awk -F " (•)" '{print $1}');
+sanitycheck=$(timedatectl list-timezones | grep ^${zone}$ | wc -l);
+[ "$sanitycheck" = 1 ] || unset zone
+
+if [ "$1" = "current" ]; then
+  echo "$getZone"
+elif [ "$1" = "region" ]; then
+  echo "$zoneRegion"
+elif [ "$1" = "city" ]; then
+  echo "$zoneCity"
+elif [ "$1" = "list" ]; then
+  listZones "$2" 2>/dev/null
+elif [ ! -z "$zone" ]; then
   timedatectl set-timezone "$zone"
   sed -i '/^zone/d' "$config"
   echo "zone = ${zone}" >> "$config"
 fi
 
-echo "$zone"
-export zone
+### END ###

@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="1.3" ######
+version="1.4" ######
 ### JustBrowsing ###
 ####################
 
@@ -32,7 +32,7 @@ printerTree() {
       <action>echo LocalPrinter: $'$1'</action>
       <action function="refresh">'$1'</action>
     </comboboxtext>
-    <tree selection-mode="2" stock-id="gtk-print" selected-row="'$printRow'" column-visible="false|true|true|true" exported-column="2" rules-hint="true">
+    <tree selection-mode="2" stock-id="gtk-print" selected-row="'$printRow'" column-visible="false|true|true|true" exported-column="2" rules-hint="true" hscrollbar-policy="2">
       <variable>'$2'</variable>
       <label>Brand|Model|Driver</label>
       <height>'$4'</height>
@@ -64,7 +64,7 @@ printerTree() {
 }
 
 knownPrinterTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$2'" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$2'" rules-hint="true" hscrollbar-policy="2">
       <variable>'$1'</variable>
       <label>Installed Printers</label>
       <height>'$4'</height>
@@ -101,7 +101,7 @@ refreshNetworks() {
 }
 
 networkTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$2'" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" selected-row="'$2'" rules-hint="true" hscrollbar-policy="2">
       <variable>'$1'</variable>
       <label>Saved Networks</label>
       <height>'$4'</height>
@@ -225,18 +225,7 @@ export freshProfile
 
 checkBoxes() {
   echo '<frame>
-          <text><label>More options (requires reboot)</label></text>
-			<checkbox sensitive="false">
-                <label>Copy to RAM</label>
-			    <variable>Copy2RAM</variable>
-			    <action>echo</action>
-     		</checkbox>
-			<checkbox sensitive="false">
-                <label>Enable zRAM</label>
-			    <default>true</default>
-			    <variable>zRAM</variable>
-			    <action>echo</action>
-     		</checkbox>
+            <text><label>Requires reboot</label></text>
 			<checkbox auto-refresh="true">
                 <label>Enable "clean" profiles</label>
 			    <variable>cleanProfiles</variable>
@@ -244,6 +233,27 @@ checkBoxes() {
 			    <action>setjb-clean $cleanProfiles</action>
      		</checkbox>
         </frame>'
+}
+
+############################################################################################
+
+emailProvider=$(setjb-email 2>/dev/null)
+[ -z "$emailProvider" ] && emailProvider="0"
+export emailProvider
+
+emailEntry() {
+  echo '<text><label>E-mail Provider</label></text>
+        <comboboxtext>
+          <default>'$emailProvider'</default>
+          <variable>Email</variable>
+          <item>(none)</item>
+          <item>Google</item>
+          <item>Microsoft</item>
+          <item>Yahoo</item>
+          <item>Zoho</item>
+          <action>echo "Setting E-mail Provider: $Email"</action>
+          <action>setjb-email "$Email"</action>
+        </comboboxtext>'
 }
 
 ############################################################################################
@@ -273,28 +283,24 @@ urlEntry() {
 
 ############################################################################################
 
-getDisplay() {
-  setjb-display current "$@"
-}
+resolution=$(setjb-display 2>/dev/null | awk -F : '{print $1}')
+export resolution
 
 setDisplay() {
+  panel=$(pgrep -o adeskbar);
   setjb-display "$1" "$2"
-  loadjb-panel
+  [ ! -z "$panel" ] && loadjb-panel
 }
 
-export -f getDisplay setDisplay
-
-displayState=$(setjb-display | awk '{print $1}' | grep "[0-9]x[0-9]");
-displayList=$(getDisplay 2>&1);
-displaySelect=$(grep -n "${displayState}$" <(echo "$displayList") | awk -F : '{print $1-1}');
+export -f setDisplay
 
 displayTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|false" selected-row="'$displaySelect'" exported-column="0" rules-hint="true" auto-stort="true" sort-type="1" column-sort-function="1">
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|false" selected-row="0" exported-column="0" rules-hint="true" auto-stort="true" sort-type="1" column-sort-function="1" hscrollbar-policy="2">
       <variable>'$1'</variable>
       <label>'$1' | </label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input icon-column="0">bash -c "getDisplay gtk"</input>
+      <input icon-column="0">setjb-display current gtk</input>
     </tree>
     <comboboxtext>
       <variable>'$2'</variable>
@@ -305,14 +311,15 @@ displayTree() {
     </comboboxtext>
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
-        <action>echo Setting '$4': $'$1'</action>
+        <action>echo Setting '$1': $'$1'</action>
         <action>bash -c "setDisplay $'$1' $'$2'"</action>
+        <action>refresh:'$1'</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
-        <action>echo Resetting '$1' '$2'</action>
+        <action>echo Resetting '$1' and '$2'</action>
+        <action>bash -c "setDisplay $resolution normal"</action>
         <action function="refresh">'$1'</action>
         <action function="refresh">'$2'</action>
-        <action>bash -c "setDisplay $'$1' normal"</action>
         <action>grabfocus:'$1'</action>
       </button>
     </hbox>'
@@ -320,151 +327,71 @@ displayTree() {
 
 ############################################################################################
 
-listLocales() {
-  locales=('English (US):en_US' 'Afrikaans:af' 'Amharic:am' 'Arabic:ar' 'Belarusian:be' 'Breton:br' 'Bulgarian:bg' 'Catalan:ca' 'Chinese Mainland:zh_CN' 'Chinese Taiwan:zh_TW' 'Croatian:hr' 'Dutch:nl' 'English (GB):en_GB' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:el' 'Hebrew:he' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese:ja' 'Korean:ko' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:sv' 'Thai:th' 'Turkish:tr' 'Vietnamese:vi')
-  IFS=$(echo -en "\n\b");
-  for i in ${locales[@]}; do
-    if [ "$1" = "gtk" ]; then
-      echo "$i" | awk -F : '{print $1"|"$1"|"$2}';
-    else
-      echo "$i"
-    fi
-  done
-}
-
-export -f listLocales
-
-localeState=$(setjb-locale | awk -F : '{print $1}')
-localeList=$(listLocales 2>&1);
-localeSelect=$(grep -n ":${localeState}$" <(echo "$localeList") | awk -F : '{print $1-1}');
+lang=$(setjb-locale 2>/dev/null | awk -F : '{print $1}')
+export lang
 
 localeTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="'$localeSelect'" exported-column="1" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="0" exported-column="1" rules-hint="true" hscrollbar-policy="2">
       <variable>'$1'</variable>
       <label>'$1' | Code</label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input icon-column="0">bash -c "listLocales gtk"</input>
+      <input icon-column="0">setjb-locale list gtk</input>
     </tree>
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
-        <action>echo Setting '$4': $'$1'</action>
+        <action>echo Setting '$1': $'$1'</action>
         <action>setjb-locale "$'$1'"</action>
+        <action>refresh:'$1'</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
-        <action>echo Resetting '$4'</action>
-        <action function="refresh">'$1'</action>
-        <action>setjb-locale</action>
+        <action>echo Resetting '$1'</action>
+        <action>setjb-locale "$lang"</action>
+        <action>refresh:'$1'</action>
       </button>
     </hbox>'
 }
 
 ############################################################################################
 
-listKeymaps() {
-  layouts=('US (Qwerty):us' 'US (Intl):us(intl)' 'US (Dvorak):us(dvorak)' 'Amharic:am' 'Arabic:ara' 'Belarusian:be' 'Breton:br' 'British:gb'  'Bulgarian:bg' 'Catalan:ca' 'Chinese Pinyin:cn' 'Chinese Cangjie:tw' 'Croatian:hr' 'Estonian:et' 'Finnish:fi' 'French:fr' 'German:de' 'Greek:gr' 'Hebrew:il' 'Hungarian:hu' 'Icelandic:is' 'Italian:it' 'Japanese (skk):jp' 'Korean (romaja):kr' 'Latvian:lv' 'Lithuanian:lt' 'Macedonian:mk' 'Malaylam:ml' 'Norwegian:no' 'Polish:pl' 'Romanian:ro' 'Russian:ru' 'Slovak:sk' 'Spanish:es' 'Swedish:se' 'Thai (kesmanne):th' 'Turkish:tr' 'Vietnamese (tcvn):vn')
-  IFS=$(echo -en "\n\b"); 
-  for i in ${layouts[@]}; do
-    echo $i | awk -F : '{print $1"|"$1"|"$2}';
-  done
-}
-
-export -f listKeymaps
-
-keymapState=$(xkb-switch 2>&1);
-keymapList=$(listKeymaps 2>&1);
-keymapSelect=$(grep -n "$keymapState" <(echo "$keymapList") | awk -F : '{print $1-1}');
+layout=$(setjb-keymap 2>/dev/null | awk -F : '{print $1}')
+export layout
 
 keymapTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="'$keymapSelect'" exported-column="1" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="true|true|true" selected-row="0" exported-column="1" rules-hint="true" hscrollbar-policy="2">
       <variable>'$1'</variable>
       <label>'$1' | Code</label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input icon-column="0">bash -c "listKeymaps"</input>
+      <input icon-column="0">setjb-keymap list gtk</input>
     </tree>
     <hbox homogeneous="true">
       <button use-stock="true" label="gtk-apply">
-        <action>echo Setting '$4': $'$1'</action>
+        <action>echo Setting '$1': $'$1'</action>
         <action>setjb-keymap "$'$1'"</action>
+        <action>refresh:'$1'</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
-        <action>echo Resetting '$4'</action>
-        <action function="refresh">'$1'</action>
-        <action>setjb-keymap</action>
+        <action>echo Resetting '$1'</action>
+        <action>setjb-keymap "$layout"</action>
+        <action>refresh:'$1'</action>
       </button>
     </hbox>'
 }
 
 ############################################################################################
-printRegion() {
-  input=("${!1}")
-  input=($zoneCity "${input[@]/$zoneCity}");
 
-  region=${#input[@]}
-  index=0
-  while [ "$index" -lt "$region" ] 2>/dev/null; do
-    cityname=$(echo "${input[$index]}" | sed 's/_/ /g')
-    echo "${cityname}||${input[$index]}"
-    index=$((index+1))
-  done;
-}
-
-listZones() {
-  Africa=('Accra' 'Addis_Ababa' 'Algiers' 'Asmara' 'Bamako' 'Bangui' 'Banjul' 'Bissau' 'Blantyre' 'Brazzaville' 'Bujumbura' 'Cairo' 'Casablanca' 'Ceuta' 'Conakry' 'Dakar' 'Dar_es_Salaam' 'Djibouti' 'Douala' 'El_Aaiun' 'Freetown' 'Gaborone' 'Harare' 'Johannesburg' 'Juba' 'Kampala' 'Khartoum' 'Kigali' 'Kinshasa' 'Lagos' 'Libreville' 'Lome' 'Luanda' 'Lubumbashi' 'Lusaka' 'Malabo' 'Maputo' 'Maseru' 'Mbabane' 'Mogadishu' 'Monrovia' 'Nairobi' 'Ndjamena' 'Niamey' 'Nouakchott' 'Ouagadougou' 'Porto-Novo' 'Sao_Tome' 'Tripoli' 'Tunis' 'Windhoek')
-  America=('Adak' 'Anchorage' 'Anguilla' 'Antigua' 'Araguaina' 'Argentina/Buenos_Aires' 'Argentina/Catamarca' 'Argentina/Cordoba' 'Argentina/Jujuy' 'Argentina/La_Rioja' 'Argentina/Mendoza' 'Argentina/Rio_Gallegos' 'Argentina/Salta' 'Argentina/San_Juan' 'Argentina/San_Luis' 'Argentina/Tucuman' 'Argentina/Ushuaia' 'Aruba' 'Asuncion' 'Atikokan' 'Bahia' 'Bahia_Banderas' 'Barbados' 'Belem' 'Belize' 'Blanc-Sablon' 'Boa_Vista' 'Bogota' 'Boise' 'Cambridge_Bay' 'Campo_Grande' 'Cancun' 'Caracas' 'Cayenne' 'Cayman' 'Chicago' 'Chihuahua' 'Costa_Rica' 'Creston' 'Cuiaba' 'Curacao' 'Danmarkshavn' 'Dawson' 'Dawson_Creek' 'Denver' 'Detroit' 'Dominica' 'Edmonton' 'Eirunepe' 'El_Salvador' 'Fortaleza' 'Glace_Bay' 'Godthab' 'Goose_Bay' 'Grand_Turk' 'Grenada' 'Guadeloupe' 'Guatemala' 'Guayaquil' 'Guyana' 'Halifax' 'Havana' 'Hermosillo' 'Indiana/Indianapolis' 'Indiana/Knox' 'Indiana/Marengo' 'Indiana/Petersburg' 'Indiana/Tell_City' 'Indiana/Vevay' 'Indiana/Vincennes' 'Indiana/Winamac' 'Inuvik' 'Iqaluit' 'Jamaica' 'Juneau' 'Kentucky/Louisville' 'Kentucky/Monticello' 'Kralendijk' 'La_Paz' 'Lima' 'Los_Angeles' 'Lower_Princes' 'Maceio' 'Managua' 'Manaus' 'Marigot' 'Martinique' 'Matamoros' 'Mazatlan' 'Menominee' 'Merida' 'Metlakatla' 'Mexico_City' 'Miquelon' 'Moncton' 'Monterrey' 'Montevideo' 'Montserrat' 'Nassau' 'New_York' 'Nipigon' 'Nome' 'Noronha' 'North_Dakota/Beulah' 'North_Dakota/Center' 'North_Dakota/New_Salem' 'Ojinaga' 'Panama' 'Pangnirtung' 'Paramaribo' 'Phoenix' 'Port-au-Prince' 'Port_of_Spain' 'Porto_Velho' 'Puerto_Rico' 'Rainy_River' 'Rankin_Inlet' 'Recife' 'Regina' 'Resolute' 'Rio_Branco' 'Santa_Isabel' 'Santarem' 'Santiago' 'Santo_Domingo' 'Sao_Paulo' 'Scoresbysund' 'Sitka' 'St_Barthelemy' 'St_Johns' 'St_Kitts' 'St_Lucia' 'St_Thomas' 'St_Vincent' 'Swift_Current' 'Tegucigalpa' 'Thule' 'Thunder_Bay' 'Tijuana' 'Toronto' 'Tortola' 'Vancouver' 'Whitehorse' 'Winnipeg' 'Yakutat' 'Yellowknife')
-  Antarctica=('Casey' 'Davis' 'DumontDUrville' 'Macquarie' 'Mawson' 'McMurdo' 'Palmer' 'Rothera' 'Syowa' 'Vostok')
-  Arctic=('Longyearbyen')
-  Asia=('Aden' 'Almaty' 'Amman' 'Anadyr' 'Aqtau' 'Aqtobe' 'Ashgabat' 'Baghdad' 'Bahrain' 'Baku' 'Bangkok' 'Beirut' 'Bishkek' 'Brunei' 'Choibalsan' 'Chongqing' 'Colombo' 'Damascus' 'Dhaka' 'Dili' 'Dubai' 'Dushanbe' 'Gaza' 'Harbin' 'Hebron' 'Ho_Chi_Minh' 'Hong_Kong' 'Hovd' 'Irkutsk' 'Jakarta' 'Jayapura' 'Jerusalem' 'Kabul' 'Kamchatka' 'Karachi' 'Kashgar' 'Kathmandu' 'Khandyga' 'Kolkata' 'Krasnoyarsk' 'Kuala_Lumpur' 'Kuching' 'Kuwait' 'Macau' 'Magadan' 'Makassar' 'Manila' 'Muscat' 'Nicosia' 'Novokuznetsk' 'Novosibirsk' 'Omsk' 'Oral' 'Phnom_Penh' 'Pontianak' 'Pyongyang' 'Qatar' 'Qyzylorda' 'Rangoon' 'Riyadh' 'Sakhalin' 'Samarkand' 'Seoul' 'Shanghai' 'Singapore' 'Taipei' 'Tashkent' 'Tbilisi' 'Tehran' 'Thimphu' 'Tokyo' 'Ulaanbaatar' 'Urumqi' 'Ust-Nera' 'Vientiane' 'Vladivostok' 'Yakutsk' 'Yekaterinburg' 'Yerevan')
-  Atlantic=('Azores' 'Bermuda' 'Canary' 'Cape_Verde' 'Faroe' 'Madeira' 'Reykjavik' 'South_Georgia' 'St_Helena' 'Stanley')
-  Australia=('Adelaide' 'Brisbane' 'Broken_Hill' 'Currie' 'Darwin' 'Eucla' 'Hobart' 'Lindeman' 'Lord_Howe' 'Melbourne' 'Perth' 'Sydney')
-  Europe=('Amsterdam' 'Andorra' 'Athens' 'Belgrade' 'Berlin' 'Bratislava' 'Brussels' 'Bucharest' 'Budapest' 'Busingen' 'Chisinau' 'Copenhagen' 'Dublin' 'Gibraltar' 'Guernsey' 'Helsinki' 'Isle_of_Man' 'Istanbul' 'Jersey' 'Kaliningrad' 'Kiev' 'Lisbon' 'Ljubljana' 'London' 'Luxembourg' 'Madrid' 'Malta' 'Mariehamn' 'Minsk' 'Monaco' 'Moscow' 'Oslo' 'Paris' 'Podgorica' 'Prague' 'Riga' 'Rome' 'Samara' 'San_Marino' 'Sarajevo' 'Simferopol' 'Skopje' 'Sofia' 'Stockholm' 'Tallinn' 'Tirane' 'Uzhgorod' 'Vaduz' 'Vatican' 'Vienna' 'Vilnius' 'Volgograd' 'Warsaw' 'Zagreb' 'Zaporozhye' 'Zurich')
-  Indian=('Antananarivo' 'Chagos' 'Christmas' 'Cocos' 'Comoro' 'Kerguelen' 'Mahe' 'Maldives' 'Mauritius' 'Mayotte' 'Reunion')
-  Pacific=('Apia' 'Auckland' 'Chatham' 'Chuuk' 'Easter' 'Efate' 'Enderbury' 'Fakaofo' 'Fiji' 'Funafuti' 'Galapagos' 'Gambier' 'Guadalcanal' 'Guam' 'Honolulu' 'Johnston' 'Kiritimati' 'Kosrae' 'Kwajalein' 'Majuro' 'Marquesas' 'Midway' 'Nauru' 'Niue' 'Norfolk' 'Noumea' 'Pago_Pago' 'Palau' 'Pitcairn' 'Pohnpei' 'Port_Moresby' 'Rarotonga' 'Saipan' 'Tahiti' 'Tarawa' 'Tongatapu' 'Wake' 'Wallis')
-
-  if [ -z "$1" ]; then
-    printRegion $zoneRegion[@]
-  elif [ "$1" = "Africa" ]; then
-    printRegion Africa[@]
-  elif [ "$1" = "America" ]; then
-    printRegion America[@]
-  elif [ "$1" = "Antarctica" ]; then
-    printRegion Antarctica[@]
-  elif [ "$1" = "Arctic" ]; then
-    printRegion Arctic[@]
-  elif [ "$1" = "Asia" ]; then
-    printRegion Asia[@]
-  elif [ "$1" = "Atlantic" ]; then
-    printRegion Atlantic[@]
-  elif [ "$1" = "Australia" ]; then
-    printRegion Australia[@]
-  elif [ "$1" = "Europe" ]; then
-    printRegion Europe[@]
-  elif [ "$1" = "Indian" ]; then
-    printRegion Indian[@]
-  elif [ "$1" = "Pacific" ]; then
-    printRegion Pacific[@]
-  fi
-}
-
-export -f printRegion listZones
-
-# Change in /usr/share/polkit-1/actions/org.freedesktop.timedate1.policy "auth_admin_keep" to "yes"
-
-zoneState=$(timedatectl status 2>/dev/null | grep -e "Time zone:" -e "Timezone:" | awk '{print $3}');
-zoneRegion=$(echo "$zoneState" | cut -d / -f 1);
-zoneCity=$(echo "$zoneState" | cut -d / -f 1 --complement);
-zoneList=$(listZones "$zoneRegion" 2>&1);
-zoneSelect=$(echo "$zoneList" | grep -n "$zoneCity" | awk -F : '{print $1-1}');
-export zoneRegion zoneCity
+zoneRegion=$(setjb-zone region 2>/dev/null);
+#zoneSelect=$(setjb-zone line 2>/dev/null);
+export zoneRegion #zoneSelect
 
 zoneTree() {
-  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="false|true" selected-row="'$zoneSelect'" exported-column="1" rules-hint="true">
+  echo '<tree selection-mode="2" stock-id="'$3'" column-visible="false|true" selected-row="0" exported-column="1" rules-hint="true" hscrollbar-policy="2">
       <variable>'$1'</variable>
       <label>| '$1'</label>
       <height>'$4'</height>
       <width>'$5'</width>
-      <input icon-column="0">bash -c "listZones $'$2'"</input>
+      <input icon-column="0">setjb-zone list $'$2'</input>
     </tree>
     <comboboxtext>
       <default>'$zoneRegion'</default>
@@ -545,16 +472,18 @@ lightScale() {
         <action>setjb-backlight $'$1'</action>
       </button>
       <button>
-        <label>Invert</label>
-        <input file stock="gtk-convert"></input>
-        <action>echo "Toggle invert colors"</action>
-        <action>setjb-backlight invert</action>
-      </button>
-      <button use-stock="true" label="gtk-revert-to-saved">
+        <label>Reset</label>
+        <input file stock="gtk-clear"></input>
         <action>echo "Resetting backlight: 100"</action>
         <action>setjb-backlight reset</action>
         <action function="refresh">'$1'</action>
         <action>grabfocus:'$1'</action>
+      </button>
+      <button>
+        <label>Invert</label>
+        <input file stock="gtk-convert"></input>
+        <action>echo "Toggle invert colors"</action>
+        <action>setjb-backlight invert</action>
       </button>
     </hbox>
     <timer interval="10" visible="false">
@@ -582,11 +511,15 @@ timeoutScale() {
       <default>'$getIdle'</default>
       <variable>'$1'</variable>
       <input>bash -c "refreshIdle"</input>
+      <action>echo "Setting timeout: $'$1' minutes"</action>
+      <action>setjb-idle $'$1' gtk</action>
     </hscale>
     <hbox homogeneous="true">
-      <button use-stock="true" label="gtk-apply">
-        <action>echo "Setting timeout: $'$1' minutes"</action>
-        <action>setjb-idle $'$1' gtk</action>
+      <button>
+        <label>Reset</label>
+        <input file stock="gtk-clear"></input>
+        <action>echo "Resetting timeout: 10 minutes"</action>
+        <action>setjb-idle reset</action>
         <action function="refresh">'$1'</action>
         <action>grabfocus:'$1'</action>
       </button>
@@ -595,12 +528,6 @@ timeoutScale() {
         <input file stock="gtk-stop"></input>
         <action>echo "Disabling timeout"</action>
         <action>setjb-idle off</action>
-        <action function="refresh">'$1'</action>
-        <action>grabfocus:'$1'</action>
-      </button>
-      <button use-stock="true" label="gtk-revert-to-saved">
-        <action>echo "Resetting timeout: 10 minutes"</action>
-        <action>setjb-idle reset</action>
         <action function="refresh">'$1'</action>
         <action>grabfocus:'$1'</action>
       </button>
@@ -614,48 +541,69 @@ export -f refreshIdle timeoutScale
 
 ############################################################################################
 
-getVolume=$(setjb-volume current 2>/dev/null)
-export getVolume
-
 refreshVolume() {
   getVolume=$(setjb-volume current 2>/dev/null)
   [ "$getVolume" -ge 1 -a "$getVolume" -le 200 ] && echo "$getVolume"
 }
 
+refreshMute() {
+  getMute=$(setjb-volume status 2>/dev/null)
+  echo "$getMute"
+}
+
+toggleMute() {
+  getMute=$(setjb-volume status 2>/dev/null)
+  [ "$getMute" = "false" ] && setjb-volume mute
+  [ "$getMute" = "true" ] && setjb-volume unmute
+}
+
 volumeScale() {
   echo '<text><label>Sound volume (percent)</label></text>
-    <hscale width-request="300" height-request="50" range-min="0" range-max="200" range-step="1">
-      <default>'$getVolume'</default>
+    <hscale width-request="200" height-request="50" range-min="0" range-max="200" range-step="1">
       <variable>'$1'</variable>
       <input>bash -c "refreshVolume"</input>
+      <action>echo "Setting volume: $'$1'"</action>
+      <action>setjb-volume $'$1'</action>
     </hscale>
     <hbox homogeneous="true">
-      <button use-stock="true" label="gtk-apply">
-        <action>echo "Setting volume: $'$1'"</action>
-        <action>setjb-volume $'$1'</action>
-      </button>
-      <button use-stock="true" label="gtk-revert-to-saved">
+      <button>
+        <label>Reset</label>
+        <input file stock="gtk-clear"></input>
         <action>echo "Resetting volume: 100"</action>
         <action>setjb-volume reset</action>
         <action function="refresh">'$1'</action>
+        <action function="refresh">'$2'</action>
         <action>grabfocus:'$1'</action>
       </button>
+      <checkbox auto-refresh="true">
+        <label>Mute</label>
+        <variable>'$2'</variable>
+        <input>bash -c "refreshMute"</input>
+        <action>bash -c "toggleMute"</action>
+      </checkbox>
     </hbox>
-    <timer interval="10" visible="false">
+    <timer interval="2" visible="false">
       <action condition="command_is_true([ $nbk -eq 2 ] && echo true)">refresh:Audio</action>
     </timer>'
 }
 
-export -f refreshVolume volumeScale
+export -f refreshVolume refreshMute toggleMute volumeScale
 
 ############################################################################################
 
 getMouse=$(setjb-mouse current 2>/dev/null)
-export getMouse
+getTap=$(setjb-mouse tap 2>/dev/null)
+export getMouse getTap
 
 refreshMouse() {
   getMouse=$(setjb-mouse current 2>/dev/null)
   echo "$getMouse"
+}
+
+toggleTap() {
+  getTap=$(setjb-mouse tap 2>/dev/null)
+  [ "$getTap" = "false" ] && setjb-mouse touchpad enabletap
+  [ "$getTap" = "true" ] && setjb-mouse touchpad disabletap
 }
 
 mouseScale() {
@@ -671,24 +619,26 @@ mouseScale() {
         <action>setjb-mouse $'$1' gtk</action>
       </button>
       <button>
-        <label>Click</label>
-        <input file stock="gtk-select-color"></input>
-        <action>echo "Toggle mousetap"</action>
-        <action>setjb-mouse enabletap</action>
-      </button>
-      <button use-stock="true" label="gtk-revert-to-saved">
+        <label>Reset</label>
+        <input file stock="gtk-clear"></input>
         <action>echo "Resetting mouse acceleration: 2/1 4"</action>
         <action>setjb-mouse reset</action>
         <action function="refresh">'$1'</action>
         <action>grabfocus:'$1'</action>
       </button>
+      <checkbox auto-refresh="true">
+        <label>Touchpad Tap</label>
+        <variable>'$2'</variable>
+        <default>'$getTap'</default>
+        <action>bash -c "toggleTap"</action>
+      </checkbox>
     </hbox>
     <timer interval="10" visible="false">
       <action condition="command_is_true([ $nbk -eq 2 ] && echo true)">refresh:Cursor</action>
     </timer>'
 }
 
-export -f refreshMouse mouseScale
+export -f refreshMouse toggleTap mouseScale
 
 ############################################################################################
 
@@ -709,6 +659,7 @@ MAIN_DIALOG='
           '"`defaultRadio`"'
           '"`virtualRadio`"'
           '"`checkBoxes`"'
+          '"`emailEntry`"'
           '"`urlEntry`"'
         </vbox>
         <vseparator></vseparator>
@@ -732,7 +683,7 @@ MAIN_DIALOG='
         </vbox>
         <vseparator></vseparator>
         <vbox>
-        '"`printerTree USBprint Printer Brand 420 440`"'
+          '"`printerTree USBprint Printer Brand 420 440`"'
           <hseparator></hseparator>
         </vbox>
       </hbox>
@@ -747,13 +698,13 @@ MAIN_DIALOG='
         </edit>
         <vseparator></vseparator>
         <vbox>
+          '"`mouseScale Cursor Touchpad`"'
+          <hseparator></hseparator>
           '"`lightScale Backlight`"'
           <hseparator></hseparator>
           '"`timeoutScale Idle`"'
           <hseparator></hseparator>
-          '"`mouseScale Cursor`"'
-          <hseparator></hseparator>
-          '"`volumeScale Audio`"'
+          '"`volumeScale Audio Mute`"'
           <hseparator></hseparator>
         </vbox>
       </hbox>
