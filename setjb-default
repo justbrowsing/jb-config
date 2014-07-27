@@ -3,23 +3,32 @@
 config="/etc/justbrowsing/data/config"
 adeskbar="/home/user/.config/adeskbar/default.cfg"
 
-if [ ! -z "$1" ]; then
-  default="$1"
-elif [ -f "$config" ]; then
+if [ -f "$config" ]; then
   default=$(grep ^default "$config" | awk -F = '{print $NF}' | awk '{print $NF}')
 fi
 
-[ -z "$default" ] && default="firefox"
-sed -i '/^default/d' "$config"
-echo "default = ${default}" >> "$config"
-echo "$default"
-
-if [ "$default" = "firefox" ]; then
-  rm /tmp/google-chrome.lock
-elif [ "$default" = "chrome" ]; then
-  default="google-chrome"
-  rm /tmp/firefox.lock
+if [ ! -z "$1" ]; then
+  default="$1"
 fi
 
-touch /tmp/${default}.lock
-cp /opt/justbrowsing/${default}.cfg "$adeskbar"
+setDefault() {
+  [ -z "$default" ] && default="firefox"
+  if [ "$default" = "firefox" ]; then
+    rm /tmp/google-chrome.lock
+  elif [ "$default" = "chrome" ]; then
+    default="google-chrome"
+    rm /tmp/firefox.lock
+  fi
+
+  touch /tmp/${default}.lock
+  cp /opt/justbrowsing/${default}.cfg "$adeskbar"
+}
+
+if [ -z "$1" ]; then
+  [ -z "$default" ] && default="firefox"
+  echo "$default"
+elif [ ! -z "$default" ]; then
+  sed -i '/^default/d' "$config"
+  echo "default = ${default}" >> "$config"
+  setDefault
+fi

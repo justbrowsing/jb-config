@@ -7,13 +7,17 @@ JustBrowsing Settings GUI configurator
 
 More information: http://goo.gl/mzbB5G (Tumblr)
 
-Completed:
+Recent:
+* Fix: Radio buttons
+* New: Set email provider
 * New: Save/load printers
 * New: Set backlight level
 * New: Set idle timeout
 * New: Set volume
 * New: Set mouse acceleration
 * New: Toggle touchpad tapping
+
+Completed:
 * Set default browser
 * Detect and set virtual GPU
 * Set force clean profile

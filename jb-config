@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="1.4" ######
+version="1.5" ######
 ### JustBrowsing ###
 ####################
 
@@ -146,11 +146,12 @@ menuBar() {
 
 ############################################################################################
 
-ffRadio="false"
-gcRadio="false"
-[ -f "/tmp/firefox.lock" ] && ffRadio="true"
-[ -f "/tmp/google-chrome.lock" ] && gcRadio="true"
-export ffRadio gcRadio
+ffDefault="false"
+gcDefault="false"
+getBrowser=$(setjb-default 2>/dev/null)
+[ "$getBrowser" = "firefox" ] && ffDefault="true"
+[ "$getBrowser" != "firefox" ] && gcDefault="true"
+export getBrowser ffDefault gcDefault
 
 defaultRadio() {
   echo '<frame>
@@ -159,14 +160,14 @@ defaultRadio() {
 			<radiobutton>
                 <variable>defaultFF</variable>
                 <label>Firefox</label>
-                <default>'$ffRadio'</default>
-                <action condition="active_is_true(defaultFF)">setjb-default "firefox"</action>
+                <default>'$ffDefault'</default>
+                <action signal="button-press-event">setjb-default firefox</action>
      		</radiobutton>
 			<radiobutton>
                 <variable>defaultGC</variable>
                 <label>Chrome</label>
-                <default>'$gcRadio'</default>
-                <action condition="active_is_true(defaultGC)">setjb-default "chrome"</action>
+                <default>'$gcDefault'</default>
+                <action signal="button-press-event">setjb-default chrome</action>
      		</radiobutton>
             </hbox>
         </frame>'
@@ -177,41 +178,40 @@ defaultRadio() {
 realGPU="false"
 qxlGPU="false"
 vboxGPU="false"
-vmGPU="false"
+vmwareGPU="false"
 getVM=$(setjb-gpu 2>/dev/null)
 [ -z "$getVM" ] && realGPU="true"
 [ "$getVM" = "qxl" ] && qxlGPU="true"
 [ "$getVM" = "vbox" ] && vboxGPU="true"
-[ "$getVM" = "vmware" ] && vmGPU="true"
-export realGPU qxlGPU vboxGPU vmGPU
+[ "$getVM" = "vmware" ] && vmwareGPU="true"
+export realGPU qxlGPU vboxGPU vmwareGPU
 
 virtualRadio() {
   echo '<frame>
           <text><label>Virtual GPU</label></text>
 			<radiobutton>
                 <label>none</label>
-                <default>true</default>
 			    <variable>noVM</variable>
                 <default>'$realGPU'</default>
-                <action condition="active_is_true(noVM)">setjb-gpu "none"</action>
+                <action signal="button-press-event">setjb-gpu none</action>
      		</radiobutton>
 			<radiobutton>
                 <label>Spice/QXL</label>
 			    <variable>spice</variable>
                 <default>'$qxlGPU'</default>
-                <action condition="active_is_true(spice)">setjb-gpu "qxl"</action>
+                <action signal="button-press-event">setjb-gpu qxl</action>
      		</radiobutton>
 			<radiobutton>
                 <label>VirtualBox</label>
 			    <variable>virtualbox</variable>
                 <default>'$vboxGPU'</default>
-                <action condition="active_is_true(virtualbox)">setjb-gpu "vbox"</action>
+                <action signal="button-press-event">setjb-gpu vbox</action>
      		</radiobutton>
 			<radiobutton>
                 <label>VMware</label>
 			    <variable>vmware</variable>
-                <default>'$vmGPU'</default>
-                <action condition="active_is_true(vmware)">setjb-gpu "vmware"</action>
+                <default>'$vmwareGPU'</default>
+                <action signal="button-press-event">setjb-gpu vmware</action>
      		</radiobutton>
         </frame>'
 }
@@ -382,8 +382,7 @@ keymapTree() {
 ############################################################################################
 
 zoneRegion=$(setjb-zone region 2>/dev/null);
-#zoneSelect=$(setjb-zone line 2>/dev/null);
-export zoneRegion #zoneSelect
+export zoneRegion
 
 zoneTree() {
   echo '<tree selection-mode="2" stock-id="'$3'" column-visible="false|true" selected-row="0" exported-column="1" rules-hint="true" hscrollbar-policy="2">
@@ -421,33 +420,6 @@ zoneTree() {
       </button>
     </hbox>'
 }
-############################################################################################
-
-debugOutput() {
-  tmpFile="/dev/shm/jb-config.debug"
-  date > "$tmpFile"
-  echo "Display:$Display" >> "$tmpFile"
-  echo "Rotate:$Rotate" >> "$tmpFile"
-  echo "Keymap:$Keymap" >> "$tmpFile"
-  echo "Default:$Default" >> "$tmpFile"
-  echo "GPU:$GPU" >> "$tmpFile"
-  echo "Copy2RAM:$Copy2RAM" >> "$tmpFile"
-  echo "zRAM:$zRAM" >> "$tmpFile"
-  echo "CleanProfiles:$cleanProfiles" >> "$tmpFile"
-  echo "URL:$URL" >> "$tmpFile"
-  echo "Timezone:$Timezone" >> "$tmpFile"
-  echo "Region:$Region" >> "$tmpFile"
-  echo "Locale:$Locale" >> "$tmpFile"
-  echo "SavedPrinters:$SavedPrinters" >> "$tmpFile"
-  echo "USBprint:$USBprint" >> "$tmpFile"
-  echo "Printer:$Printer" >> "$tmpFile"
-  echo "Network:$Network" >> "$tmpFile"
-  echo "Backlight:$Backlight" >> "$tmpFile"
-  echo "Audio:$Audio" >> "$tmpFile"
-  echo "Idle:$Idle" >> "$tmpFile"
-}
-
-export -f debugOutput
 
 ############################################################################################
 
@@ -458,6 +430,8 @@ refreshLight() {
   getLight=$(setjb-backlight current 2>/dev/null)
   [ "$getLight" -ge 1 -a "$getLight" -le 100 ] && echo "$getLight"
 }
+
+export -f refreshLight
 
 lightScale() {
   echo '<text><label>Screen Backlight (percent)</label></text>
@@ -491,8 +465,6 @@ lightScale() {
     </timer>'
 }
 
-export -f refreshLight lightScale
-
 ############################################################################################
 
 getIdle=$(setjb-idle current 2>/dev/null)
@@ -504,6 +476,8 @@ refreshIdle() {
   [ "$getIdle" -ge "60" ] 2>/dev/null && getIdle=$((getIdle/60))
   echo "$getIdle"
 }
+
+export -f refreshIdle
 
 timeoutScale() {
   echo '<text><label>Screen Timeout (minutes)</label></text>
@@ -537,8 +511,6 @@ timeoutScale() {
     </timer>'
 }
 
-export -f refreshIdle timeoutScale
-
 ############################################################################################
 
 refreshVolume() {
@@ -556,6 +528,8 @@ toggleMute() {
   [ "$getMute" = "false" ] && setjb-volume mute
   [ "$getMute" = "true" ] && setjb-volume unmute
 }
+
+export -f refreshVolume refreshMute toggleMute
 
 volumeScale() {
   echo '<text><label>Sound volume (percent)</label></text>
@@ -587,8 +561,6 @@ volumeScale() {
     </timer>'
 }
 
-export -f refreshVolume refreshMute toggleMute volumeScale
-
 ############################################################################################
 
 getMouse=$(setjb-mouse current 2>/dev/null)
@@ -605,6 +577,8 @@ toggleTap() {
   [ "$getTap" = "false" ] && setjb-mouse touchpad enabletap
   [ "$getTap" = "true" ] && setjb-mouse touchpad disabletap
 }
+
+export -f refreshMouse toggleTap
 
 mouseScale() {
   echo '<text><label>Mouse acceleration (multiplier)</label></text>
@@ -638,8 +612,6 @@ mouseScale() {
     </timer>'
 }
 
-export -f refreshMouse toggleTap mouseScale
-
 ############################################################################################
 
 MAIN_DIALOG='
@@ -666,7 +638,7 @@ MAIN_DIALOG='
         <vbox>
           '"`zoneTree Timezone Region gtk-home 175 220`"'
           <hseparator></hseparator>
-          '"`localeTree Locale 1 gtk-spell-check 185 220`"'
+          '"`localeTree Locale 1 gtk-spell-check 185 245`"'
         </vbox>
       </hbox>
     </frame>
@@ -676,7 +648,7 @@ MAIN_DIALOG='
     <frame>
       <hbox>
         <vbox>
-          '"`knownPrinterTree SavedPrinters 0 gtk-print 160 220`"'
+          '"`knownPrinterTree SavedPrinters 0 gtk-print 160 228`"'
           <hseparator></hseparator>
           '"`networkTree Network 0 gtk-network 160 220`"'
           <hseparator></hseparator>
