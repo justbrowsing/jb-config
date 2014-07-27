@@ -35,7 +35,7 @@ if [ -z "$1" ]; then
 elif [ "$1" = "list" ]; then
   shift
   listKeymaps "$@"
-else
+elif [ ! -z "$keymap" ]; then
   pkill -f jbxkb
   jbxkb noquit "$keymap" &
   sed -i '/^keymap/d' "$config"
