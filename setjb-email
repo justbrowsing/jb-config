@@ -1,6 +1,10 @@
 #!/bin/bash
 config="/etc/justbrowsing/data/config"
 
+if [ "$1" = "load" ]; then
+  shift && load="true"
+fi
+
 if [ ! -z "$1" ]; then
   email="$1"
 elif [ -f "$config" ]; then
@@ -9,7 +13,7 @@ fi
 
 email=$(echo "$email" | grep -o -e "^Google$" -e "^Microsoft$" -e "^Yahoo$" -e "^Zoho$");
 
-if [ "$1" = "load" ]; then
+if [ "$load" = "true" ]; then
   [ -z "$email" ] && email="index"
   x-www-browser /apps/email/${email}.html
 elif [[ "$1" = *none* ]]; then
@@ -17,6 +21,5 @@ elif [[ "$1" = *none* ]]; then
 elif [ ! -z "$email" ]; then
   sed -i '/^email/d' "$config"
   echo "email = ${email}" >> "$config"
-else
   echo "$email"
 fi

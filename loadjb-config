@@ -53,6 +53,7 @@ locale=$(PARSE_BOOT locale)
 clean=$(PARSE_BOOT clean)
 gpu=$(PARSE_BOOT gpu)
 url=$(PARSE_BOOT url)
+url=$(PARSE_BOOT email)
 backlight=$(PARSE_BOOT backlight)
 idle=$(PARSE_BOOT idle)
 volume=$(PARSE_BOOT volume)
@@ -71,6 +72,7 @@ OVERRIDE_CONFIG locale
 OVERRIDE_CONFIG clean
 OVERRIDE_CONFIG gpu
 OVERRIDE_CONFIG url
+OVERRIDE_CONFIG email
 OVERRIDE_CONFIG backlight
 OVERRIDE_CONFIG idle
 OVERRIDE_CONFIG volume

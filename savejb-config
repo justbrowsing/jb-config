@@ -79,6 +79,7 @@ locale=$(PARSE_CONFIG locale)
 clean=$(PARSE_CONFIG clean)
 gpu=$(PARSE_CONFIG gpu)
 url=$(PARSE_CONFIG url)
+email=$(PARSE_CONFIG email)
 backlight=$(PARSE_CONFIG backlight)
 idle=$(PARSE_CONFIG idle)
 volume=$(PARSE_CONFIG volume)
@@ -103,6 +104,7 @@ if [ -b "$probeDevice" ]; then
   OVERRIDE_CFG clean
   OVERRIDE_CFG gpu
   OVERRIDE_CFG url
+  OVERRIDE_CFG email
   OVERRIDE_CFG backlight
   OVERRIDE_CFG idle
   OVERRIDE_CFG volume
