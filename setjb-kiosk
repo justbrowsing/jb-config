@@ -1,0 +1,23 @@
+#!/bin/bash
+config="/etc/justbrowsing/data/config"
+
+if [ -f "$config" ]; then
+  kiosk=$(grep ^kiosk "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
+  [ "$kiosk" = "true" ] && mode="fullscreen" || mode="normal"
+fi
+
+if [ "$1" = "load" -a ! -z "$mode" ]; then
+  find "$HOME/.mozilla/firefox/" -name "localstore.rdf" -exec cp "/usr/share/jb-config/localstore_${mode}.rdf" {} \;
+fi
+
+[ ! -z "$1" ] && kiosk="$1"
+[ -z "$kiosk" ] && kiosk="false"
+
+if [ -z "$1" ]; then
+  echo "$kiosk"
+elif [ "$kiosk" = "false" ]; then
+  sed -i '/^kiosk/d' "$config"
+elif [ "$kiosk" = "true" ]; then
+  sed -i '/^kiosk/d' "$config"
+  echo "kiosk = ${kiosk}" >> "$config"
+fi

@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### loadconfig #####
-version=0.6 ########
+version=0.7 ########
 ### JustBrowsing ###
 ####################
 
@@ -10,6 +10,7 @@ mntDir="/etc/justbrowsing/mount"
 saveDir="/etc/justbrowsing/data"
 configFile="${saveDir}/config"
 cfgFile="${mntDir}/justbrowsing.cfg"
+netFile="${mntDir}/networking"
 
 EXIT_STATUS() { echo "ERROR: $@"; exit 1; }
 
@@ -32,6 +33,12 @@ OVERRIDE_CONFIG() {
   fi
 }
 
+UNPACK_DATA() {
+  cypher="enc -aes-256-cbc -salt"
+  index=$(hexdump "/usr/share/pixmaps/jbconfig.png")
+  openssl $cypher -in "$netFile" -d -pass "file:$index" | tar -C "$saveDir" -xzv
+}
+
 # Skip loading config
 skipcfg=$(PARSE_BOOT skipcfg)
 
@@ -40,8 +47,8 @@ if [ -b "$probeDevice" -a "$skipcfg" != "true" ]; then
   [ "$UID" = "0" ] || EXIT_STATUS "Need to be root"
   mkdir -p "$mntDir" "$saveDir" || EXIT_STATUS "unable to create dirs: $mntDir $saveDir"
   mount -o ro "$probeDevice" "$mntDir" || EXIT_STATUS "unable to mount $probeDevice"
-  [ -f "$cfgFile" ] &&
-  cp "$cfgFile" "$configFile"
+  [ -f "$cfgFile" ] && cp "$cfgFile" "$configFile"
+  [ -f "$netFile" ] && UNPACK_DATA
   umount "$mntDir" 2>/dev/null || EXIT_STATUS "unable to unmount $mntDir"
 fi
 
@@ -62,6 +69,7 @@ touchpad=$(PARSE_BOOT touchpad)
 default=$(PARSE_BOOT default)
 [ "$default" = "chrome" ] && default="google-chrome"
 printer=$(MULTIPARSE_BOOT printer)
+network=$(PARSE_BOOT network)
 
 # Override config with boot parameters
 mkdir -p "$saveDir" || EXIT_STATUS "unable to create $saveDir"
@@ -80,6 +88,7 @@ OVERRIDE_CONFIG mouse
 OVERRIDE_CONFIG touchpad
 OVERRIDE_CONFIG default
 OVERRIDE_CONFIG printer
+OVERRIDE_CONFIG network
 
 chown -R user:users "$saveDir"
 

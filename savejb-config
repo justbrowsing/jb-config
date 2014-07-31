@@ -10,6 +10,7 @@ mntDir="/etc/justbrowsing/mount"
 saveDir="/etc/justbrowsing/data"
 configFile="${saveDir}/config"
 cfgFile="${mntDir}/justbrowsing.cfg"
+netFile="${mntDir}/networking"
 lockFile="/tmp/savecfg.lock"
 daemon="/tmp/savecfg.daemon"
 logFile="/tmp/savecfg.log"
@@ -34,6 +35,13 @@ OVERRIDE_CFG() {
       echo "$1 = $arg" >> "$cfgFile"
     done
   fi
+}
+
+PACK_DATA() {
+  [ -f "$netFile" ] && rm "$netFile"
+  cypher="enc -aes-256-cbc -salt"
+  index=$(hexdump "/usr/share/pixmaps/jbconfig.png")
+  tar -C "$saveDir" -czv networks keyrings | openssl "$cypher" -out "$netFile" -pass "file:$index"
 }
 
 MAKE_HTML() {
@@ -88,6 +96,7 @@ touchpad=$(PARSE_CONFIG touchpad)
 default=$(PARSE_CONFIG default)
 [ "$default" = "google-chrome" ] && default="chrome"
 printer=$(MULTIPARSE_CONFIG printer)
+network=$(PARSE_CONFIG network)
 
 # Load config from persistent storage
 if [ -b "$probeDevice" ]; then
@@ -112,6 +121,8 @@ if [ -b "$probeDevice" ]; then
   OVERRIDE_CFG touchpad
   OVERRIDE_CFG default
   OVERRIDE_CFG printer
+  OVERRIDE_CFG network
+  PACK_DATA
   MAKE_HTML
   umount "$mntDir" 2>/dev/null || LOG_STATUS "unable to unmount $mntDir"
   echo "==> Saved config to justbrowsing.cfg"

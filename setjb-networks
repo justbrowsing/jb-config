@@ -1,43 +1,53 @@
 #!/bin/bash
-config="/etc/justbrowsing/data/config"
-
-if [ ! -z "$1" ]; then
-  network="$1"
-elif [ -f "$config" ]; then
-  network=$(grep ^network "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
-fi
-
-netDel="/dev/shm/.nm-blacklist"
-netSaved="/etc/NetworkManager/system-connections/"
-export netDel netSaved
+saveDir="/etc/justbrowsing/data"
+config="${saveDir}/config"
+nmDir="/etc/NetworkManager/system-connections"
+nmDel="/dev/shm/.nm-blacklist"
+keyDir="$HOME/.local/share/keyrings"
 
 listNetworks() {
-  if [ -f "$netDel" -a -d "$netSaved" ]; then
-    diff -y --suppress-common-lines <(ls --color=none "$netSaved") <(cat "$netDel" | sort) | awk -F "\t" '{print $1}'
+  if [ -f "$nmDel" -a -d "$nmDir" ]; then
+    diff -y --suppress-common-lines <(ls --color=none "$nmDir") <(cat "$nmDel" | sort) | awk -F "\t" '{print $1}'
   else
-    ls --color=none "$netSaved"
+    ls --color=none "$nmDir"
   fi
 }
 
+loadNetworks() {
+  rm "$nmDel" 2>/dev/null
+  mkdir -p "$nmDir" "$keyDir"
+  find "${saveDir}/networks" -type f -exec cp {} "$nmDir" \;
+  find "${saveDir}/keyrings" -type f -exec cp {} "$keyDir" \;
+}
+
 saveNetworks() {
-  echo;
+  mkdir -p "${saveDir}/networks" "${saveDir}/keyrings"
+  find "$keyDir" -type f -exec cp {} "${saveDir}/keyrings" \;
+  network="0"
+  IFS=$(echo -en "\n\b");
+  for network in $(listNetworks); do
+    cp "$network" "${saveDir}/networks"
+    network=$((network+1))
+  done;
 }
 
 if [ "$1" = "current" ]; then
   listNetworks
+elif [ "$1" = "load" ]; then
+  loadNetworks
 elif [ "$1" = "reset" ]; then
-  > "$netDel"
-  sed -i '/^network/d' "$config"
-elif [ "$1" = "delete" ]; then
-  shift
-  echo "$@" >> "$netDel"
+  > "$nmDel"
   saveNetworks
   sed -i '/^network/d' "$config"
   echo "network = ${network}" >> "$config"
-elif [ ! -z "$network" ]; then
+elif [ "$1" = "delete" ]; then
+  shift
+  echo "$@" >> "$nmDel"
+  saveNetworks
+  sed -i '/^network/d' "$config"
+  echo "network = ${network}" >> "$config"
+elif [ "$1" = "save" ]; then
   saveNetworks
   sed -i '/^network/d' "$config"
   echo "network = ${network}" >> "$config"
 fi
-
-export network
