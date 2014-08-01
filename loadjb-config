@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### loadconfig #####
-version=0.7 ########
+version=0.8 ########
 ### JustBrowsing ###
 ####################
 
@@ -58,9 +58,10 @@ zone=$(PARSE_BOOT zone)
 keymap=$(PARSE_BOOT keymap)
 locale=$(PARSE_BOOT locale)
 clean=$(PARSE_BOOT clean)
+kiosk=$(PARSE_BOOT kiosk)
 gpu=$(PARSE_BOOT gpu)
 url=$(PARSE_BOOT url)
-url=$(PARSE_BOOT email)
+email=$(PARSE_BOOT email)
 backlight=$(PARSE_BOOT backlight)
 idle=$(PARSE_BOOT idle)
 volume=$(PARSE_BOOT volume)
@@ -78,6 +79,7 @@ OVERRIDE_CONFIG zone
 OVERRIDE_CONFIG keymap
 OVERRIDE_CONFIG locale
 OVERRIDE_CONFIG clean
+OVERRIDE_CONFIG kiosk
 OVERRIDE_CONFIG gpu
 OVERRIDE_CONFIG url
 OVERRIDE_CONFIG email

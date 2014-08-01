@@ -22,6 +22,7 @@ loadNetworks() {
 
 saveNetworks() {
   mkdir -p "${saveDir}/networks" "${saveDir}/keyrings"
+  find "${saveDir}/networks" "${saveDir}/keyrings" -type f -exec rm {} \;
   find "$keyDir" -type f -exec cp {} "${saveDir}/keyrings" \;
   network="0"
   IFS=$(echo -en "\n\b");

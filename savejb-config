@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### saveconfig #####
-version=0.7 ########
+version=0.8 ########
 ### JustBrowsing ###
 ####################
 
@@ -85,6 +85,7 @@ zone=$(PARSE_CONFIG zone)
 keymap=$(PARSE_CONFIG keymap)
 locale=$(PARSE_CONFIG locale)
 clean=$(PARSE_CONFIG clean)
+kiosk=$(PARSE_CONFIG kiosk)
 gpu=$(PARSE_CONFIG gpu)
 url=$(PARSE_CONFIG url)
 email=$(PARSE_CONFIG email)
@@ -111,6 +112,7 @@ if [ -b "$probeDevice" ]; then
   OVERRIDE_CFG keymap
   OVERRIDE_CFG locale
   OVERRIDE_CFG clean
+  OVERRIDE_CFG kiosk
   OVERRIDE_CFG gpu
   OVERRIDE_CFG url
   OVERRIDE_CFG email

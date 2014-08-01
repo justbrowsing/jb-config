@@ -27,6 +27,8 @@ setDefault() {
 if [ -z "$1" ]; then
   [ -z "$default" ] && default="firefox"
   echo "$default"
+elif [ "$1" = "load" ]; then
+  setDefault
 elif [ ! -z "$default" ]; then
   sed -i '/^default/d' "$config"
   echo "default = ${default}" >> "$config"
