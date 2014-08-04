@@ -25,10 +25,12 @@ if [ "$1" = "current" ]; then
   [ "$1" = "gtk" -a -z "$display" ] && echo "$resolutions" | sed "1iauto [${status}] (•)" | awk '{print $0"|"$0}'
   exit 0
 elif [ "$display" = "auto" ]; then
+  monitor=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
+  xrandr --output "$monitor" --auto --rotate normal
   sed -i '/^display/d' "$config"
   sed -i '/^rotate/d' "$config"
 elif [ ! -z "$display" -a ! -z "$orientation" ]; then
-  [[ "$display" = *•* ]] && display=$(echo "$display" | sed -e 's/auto \[//' -e 's/]//' | awk -F " (•)" '{print $1}');
+  [[ "$display" = *•* ]] && display=$(echo "$display" | sed -e 's/auto \[//' -e 's/]//' | awk -F " \\\(•)" '{print $1}');
   monitor=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
   xrandr --output "$monitor" --mode "$display" --rotate "$orientation"
   sed -i '/^display/d' "$config"
@@ -36,7 +38,7 @@ elif [ ! -z "$display" -a ! -z "$orientation" ]; then
   echo "display = ${display}" >> "$config"
   echo "rotate = ${orientation}" >> "$config"
 elif [ ! -z "$display" ]; then
-  [[ "$display" = *•* ]] && display=$(echo "$display" | sed -e 's/auto \[//' -e 's/]//' | awk -F " (•)" '{print $1}');
+  [[ "$display" = *•* ]] && display=$(echo "$display" | sed -e 's/auto \[//' -e 's/]//' | awk -F " \\\(•)" '{print $1}');
   monitor=$(xrandr --current 2>&1 | grep " connected [0-9]" | awk '{print $1}' | awk NR==1);
   xrandr --output "$monitor" --mode "$display"
   sed -i '/^display/d' "$config"

@@ -13,11 +13,15 @@ listNetworks() {
   fi
 }
 
+loadKeyring() {
+  mkdir -p "$keyDir"
+  find "${saveDir}/keyrings" -type f -exec cp {} "$keyDir" \;
+}
+
 loadNetworks() {
   rm "$nmDel" 2>/dev/null
-  mkdir -p "$nmDir" "$keyDir"
+  mkdir -p "$nmDir"
   find "${saveDir}/networks" -type f -exec cp {} "$nmDir" \;
-  find "${saveDir}/keyrings" -type f -exec cp {} "$keyDir" \;
 }
 
 saveNetworks() {
@@ -26,13 +30,16 @@ saveNetworks() {
   find "$keyDir" -type f -exec cp {} "${saveDir}/keyrings" \;
   network="0"
   IFS=$(echo -en "\n\b");
-  for network in $(listNetworks); do
-    cp "$network" "${saveDir}/networks"
+  for essid in $(listNetworks); do
+    echo "$essid"
+    cp "${nmDir}/$essid" "${saveDir}/networks"
     network=$((network+1))
   done;
 }
 
-if [ "$1" = "current" ]; then
+if [ -z "$1" ]; then
+  loadKeyring
+elif [ "$1" = "current" ]; then
   listNetworks
 elif [ "$1" = "load" ]; then
   loadNetworks

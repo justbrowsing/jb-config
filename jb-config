@@ -432,11 +432,12 @@ zoneTree() {
       <button use-stock="true" label="gtk-apply">
         <action>echo Setting '$4': $'$1'</action>
         <action>setjb-zone "$'$2'/$'$1'"</action>
+        <action function="refresh">'$1'</action>
       </button>
       <button use-stock="true" label="gtk-revert-to-saved">
         <action>echo Resetting: '$1' '$2'</action>
-        <action function="refresh">'$1'</action>
         <action>setjb-zone "${zoneRegion}/$'$1'"</action>
+        <action function="refresh">'$1'</action>
         <action>grabfocus:'$1'</action>
       </button>
     </hbox>'
@@ -619,6 +620,7 @@ mouseScale() {
         <action>echo "Resetting mouse acceleration: 2/1 4"</action>
         <action>setjb-mouse reset</action>
         <action function="refresh">'$1'</action>
+        <action function="refresh">'$2'</action>
         <action>grabfocus:'$1'</action>
       </button>
       <checkbox auto-refresh="true">

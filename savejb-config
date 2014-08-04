@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### saveconfig #####
-version=0.8 ########
+version=0.9 ########
 ### JustBrowsing ###
 ####################
 
@@ -15,14 +15,15 @@ lockFile="/tmp/savecfg.lock"
 daemon="/tmp/savecfg.daemon"
 logFile="/tmp/savecfg.log"
 htmlFile="/tmp/sync.html"
+delay="5"
 
-LOG_STATUS() { echo "ERROR: $@" >> "$logFile"; }
+LOG_STATUS() { echo "ERROR: $@" | tee -a "$logFile"; }
 
-PARSE_CONFIG() { 
+PARSE_CONFIG() {
   grep ^${1} "$configFile" 2>/dev/null | sed -e "s/^${1} = //" -e "s/^${1}=//" | tail -n 1;
 }
 
-MULTIPARSE_CONFIG() { 
+MULTIPARSE_CONFIG() {
   grep ^${1} "$configFile" 2>/dev/null | sed -e "s/^${1} = //" -e "s/^${1}=//";
 }
 
@@ -40,8 +41,8 @@ OVERRIDE_CFG() {
 PACK_DATA() {
   [ -f "$netFile" ] && rm "$netFile"
   cypher="enc -aes-256-cbc -salt"
-  index=$(hexdump "/usr/share/pixmaps/jbconfig.png")
-  tar -C "$saveDir" -czv networks keyrings | openssl "$cypher" -out "$netFile" -pass "file:$index"
+  index="/usr/share/pixmaps/jbconfig.png"
+  tar -C "$saveDir" -czv networks keyrings | openssl $cypher -out "$netFile" -pass "file:$index"
 }
 
 MAKE_HTML() {
@@ -66,7 +67,7 @@ elif [ "$1" = "daemon" ]; then
   while [ -n "$session" ] && [ -f "$daemon" ]; do
     [ -f "$lockFile" ] && "$0" sync
     session=$(pgrep -o $2)
-    sleep 15
+    sleep "$delay"
   done
   exit 1
 else
