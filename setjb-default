@@ -1,13 +1,13 @@
 #!/bin/bash
 
 config="/etc/justbrowsing/data/config"
-adeskbar="/home/user/.config/adeskbar/default.cfg"
+adeskbar="$HOME/.config/adeskbar/default.cfg"
 
 if [ -f "$config" ]; then
   default=$(grep ^default "$config" | awk -F = '{print $NF}' | awk '{print $NF}')
 fi
 
-if [ ! -z "$1" ]; then
+if [ ! -z "$1" -a "$1" != "load" ]; then
   default="$1"
 fi
 

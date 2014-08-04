@@ -3,7 +3,7 @@ version=1.0
 
 applets=$(loadjb-systray 2>/dev/null);
 [ -z "$applets" ] && applets="3"
-minimum=$((622+applets*28))
+minimum=$((642+applets*28))
 adeskbar="$HOME/.config/adeskbar/default.cfg"
 log="/tmp/autosize.log"
 
