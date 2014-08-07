@@ -22,6 +22,7 @@ loadNetworks() {
   rm "$nmDel" 2>/dev/null
   mkdir -p "$nmDir"
   find "${saveDir}/networks" -type f -exec cp {} "$nmDir" \;
+  find "$nmDir" -type f -exec chmod 600 {} \;
   systemctl restart NetworkManager
 }
 

@@ -58,7 +58,6 @@ printerTree() {
         <label>Refresh</label>
         <input file stock="gtk-refresh"></input>
         <action function="refresh">'$1'</action>
-        <action function="refresh">'$3'</action>
       </button>
       <text><label>Printer brand:</label></text>
       <comboboxtext space-expand="true" space-fill="true">
