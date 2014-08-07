@@ -46,13 +46,11 @@ elif [ "$1" = "load" ]; then
   loadNetworks
 elif [ "$1" = "reset" ]; then
   > "$nmDel"
-  saveNetworks
   sed -i '/^network/d' "$config"
   echo "network = ${network}" >> "$config"
 elif [ "$1" = "delete" ]; then
   shift
   echo "$@" >> "$nmDel"
-  saveNetworks
   sed -i '/^network/d' "$config"
   echo "network = ${network}" >> "$config"
 elif [ "$1" = "save" ]; then

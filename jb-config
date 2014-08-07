@@ -132,7 +132,6 @@ networkTree() {
     </hbox>
     <timer interval="10" visible="false">
       <action condition="command_is_true([ $nbk -eq 1 ] && echo true)">refresh:Network</action>
-      <action condition="command_is_true([ $nbk -eq 1 ] && echo true)">setjb-networks save</action>
     </timer>'
 }
 

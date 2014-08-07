@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### saveconfig #####
-version=0.9 ########
+version=1.0 ########
 ### JustBrowsing ###
 ####################
 
@@ -81,24 +81,25 @@ export -f PARSE_CONFIG OVERRIDE_CFG
 skipcfg=$(PARSE_CONFIG skipcfg)
 [ "$skipcfg" = "true" ] && exit 0
 
-display=$(PARSE_CONFIG display)
-zone=$(PARSE_CONFIG zone)
-keymap=$(PARSE_CONFIG keymap)
-locale=$(PARSE_CONFIG locale)
-clean=$(PARSE_CONFIG clean)
-kiosk=$(PARSE_CONFIG kiosk)
-gpu=$(PARSE_CONFIG gpu)
-url=$(PARSE_CONFIG url)
-email=$(PARSE_CONFIG email)
+setjb-networks save 2>&1 | tee -a "$logFile"
 backlight=$(PARSE_CONFIG backlight)
-idle=$(PARSE_CONFIG idle)
-volume=$(PARSE_CONFIG volume)
-mouse=$(PARSE_CONFIG mouse)
-touchpad=$(PARSE_CONFIG touchpad)
+clean=$(PARSE_CONFIG clean)
 default=$(PARSE_CONFIG default)
-[ "$default" = "google-chrome" ] && default="chrome"
-printer=$(MULTIPARSE_CONFIG printer)
+display=$(PARSE_CONFIG display)
+email=$(PARSE_CONFIG email)
+gpu=$(PARSE_CONFIG gpu)
+idle=$(PARSE_CONFIG idle)
+keymap=$(PARSE_CONFIG keymap)
+kiosk=$(PARSE_CONFIG kiosk)
+locale=$(PARSE_CONFIG locale)
+mouse=$(PARSE_CONFIG mouse)
 network=$(PARSE_CONFIG network)
+printer=$(MULTIPARSE_CONFIG printer)
+touchpad=$(PARSE_CONFIG touchpad)
+url=$(PARSE_CONFIG url)
+volume=$(PARSE_CONFIG volume)
+zone=$(PARSE_CONFIG zone)
+[ "$default" = "google-chrome" ] && default="chrome"
 
 # Load config from persistent storage
 if [ -b "$probeDevice" ]; then
@@ -108,23 +109,23 @@ if [ -b "$probeDevice" ]; then
   touch "$cfgFile"
   sed -i 's/^M$//' "$cfgFile"
   [ -f "$cfgFile" ] || LOG_STATUS "unable to create $cfgFile"
-  OVERRIDE_CFG display
-  OVERRIDE_CFG zone
-  OVERRIDE_CFG keymap
-  OVERRIDE_CFG locale
-  OVERRIDE_CFG clean
-  OVERRIDE_CFG kiosk
-  OVERRIDE_CFG gpu
-  OVERRIDE_CFG url
-  OVERRIDE_CFG email
   OVERRIDE_CFG backlight
-  OVERRIDE_CFG idle
-  OVERRIDE_CFG volume
-  OVERRIDE_CFG mouse
-  OVERRIDE_CFG touchpad
+  OVERRIDE_CFG clean
   OVERRIDE_CFG default
-  OVERRIDE_CFG printer
+  OVERRIDE_CFG display
+  OVERRIDE_CFG email
+  OVERRIDE_CFG gpu
+  OVERRIDE_CFG idle
+  OVERRIDE_CFG keymap
+  OVERRIDE_CFG kiosk
+  OVERRIDE_CFG locale
+  OVERRIDE_CFG mouse
   OVERRIDE_CFG network
+  OVERRIDE_CFG printer
+  OVERRIDE_CFG touchpad
+  OVERRIDE_CFG url
+  OVERRIDE_CFG volume
+  OVERRIDE_CFG zone
   PACK_DATA
   MAKE_HTML
   umount "$mntDir" 2>/dev/null || LOG_STATUS "unable to unmount $mntDir"

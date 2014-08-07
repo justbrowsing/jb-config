@@ -8,6 +8,7 @@ JustBrowsing Settings GUI configurator
 More information: http://goo.gl/mzbB5G (Tumblr)
 
 Recent:
+* Save/load networks
 * Fix: Radio buttons
 * New: Set email provider
 * New: Save/load printers
@@ -32,7 +33,6 @@ Completed:
 * Remove saved networks
 
 To-Do:
-* Save/load networks
 * Bug reporting helper
 * Set various kernel parameters
 * Make generic
