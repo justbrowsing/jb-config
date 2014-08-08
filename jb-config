@@ -1,7 +1,7 @@
 #!/bin/bash
 ####################
 ### jb-config ######
-version="1.6" ######
+version="1.7" ######
 ### JustBrowsing ###
 ####################
 
@@ -10,6 +10,10 @@ width="710"
 icon="gnome-control-center"
 
 ############################################################################################
+
+gutenprint=$(which cups-genppdupdate 2>/dev/null)
+printDrivers="true"
+[ -z "$gutenprint" ] && printDrivers="false"
 
 printerStatus=$(setjb-printers current 2>/dev/null)
 defaultBrand=$(echo "$printerStatus" | awk NR==1)
@@ -39,7 +43,7 @@ printerTree() {
       <action>echo LocalPrinter: $'$1'</action>
       <action function="refresh">'$1'</action>
     </comboboxtext>
-    <tree selection-mode="2" stock-id="gtk-print" selected-row="'$printRow'" column-visible="false|true|true|true" exported-column="2" rules-hint="true" hscrollbar-policy="2">
+    <tree selection-mode="2" stock-id="gtk-print" selected-row="'$printRow'" column-visible="false|true|true|true" exported-column="2" rules-hint="true" sensitive="'$printDrivers'" hscrollbar-policy="2">
       <variable>'$2'</variable>
       <label>Brand|Model|Driver</label>
       <height>'$4'</height>
@@ -47,7 +51,7 @@ printerTree() {
       <input icon-column="1">setjb-printers $'$3'</input>
       <action>echo PrinterModel: $'$2'</action>
     </tree>
-    <hbox>
+    <hbox sensitive="'$printDrivers'">
       <button>
         <label>Install</label>
         <input file stock="gtk-print"></input>
@@ -100,10 +104,12 @@ export -f refreshPrinters printerTree knownPrinterTree
 ############################################################################################
 
 getNetworks=$(setjb-networks current 2>/dev/null)
+[ -z "$getNetworks" ] && getNetworks="(none connected)"
 export getNetworks
 
 refreshNetworks() {
   getNetworks=$(setjb-networks current 2>/dev/null)
+  [ -z "$getNetworks" ] && getNetworks="(none connected)"
   echo "$getNetworks"
 }
 

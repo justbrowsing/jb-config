@@ -18,6 +18,12 @@ loadKeyring() {
   find "${saveDir}/keyrings" -type f -exec cp {} "$keyDir" \;
 }
 
+saveKeyring() {
+  mkdir -p "${saveDir}/keyrings"
+  find "${saveDir}/keyrings" -type f -exec rm {} \;
+  find "$keyDir" -type f -exec cp {} "${saveDir}/keyrings" \;
+}
+
 loadNetworks() {
   rm "$nmDel" 2>/dev/null
   mkdir -p "$nmDir"
@@ -27,9 +33,8 @@ loadNetworks() {
 }
 
 saveNetworks() {
-  mkdir -p "${saveDir}/networks" "${saveDir}/keyrings"
-  find "${saveDir}/networks" "${saveDir}/keyrings" -type f -exec rm {} \;
-  find "$keyDir" -type f -exec cp {} "${saveDir}/keyrings" \;
+  mkdir -p "${saveDir}/networks"
+  find "${saveDir}/networks" -type f -exec rm {} \;
   network="0"
   IFS=$(echo -en "\n\b");
   for essid in $(listNetworks); do
@@ -54,6 +59,8 @@ elif [ "$1" = "delete" ]; then
   echo "$@" >> "$nmDel"
   sed -i '/^network/d' "$config"
   echo "network = ${network}" >> "$config"
+elif [ "$1" = "store" ]; then
+  saveKeyring
 elif [ "$1" = "save" ]; then
   saveNetworks
   sed -i '/^network/d' "$config"
