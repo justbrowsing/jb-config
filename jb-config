@@ -14,6 +14,7 @@ icon="gnome-control-center"
 gutenprint=$(which cups-genppdupdate 2>/dev/null)
 printDrivers="true"
 [ -z "$gutenprint" ] && printDrivers="false"
+export printDrivers
 
 printerStatus=$(setjb-printers current 2>/dev/null)
 defaultBrand=$(echo "$printerStatus" | awk NR==1)
@@ -162,6 +163,12 @@ menuBar() {
 
 ############################################################################################
 
+ffExec=$(ls /usr/lib/firefox/libxul.so 2>/dev/null)
+gcExec=$(ls /opt/google/chrome/chrome 2>/dev/null)
+chooseBrowser="true"
+[ -z "$ffExec" -o -z "$gcExec" ] && chooseBrowser="false"
+export chooseBrowser
+
 ffDefault="false"
 gcDefault="false"
 getBrowser=$(setjb-default 2>/dev/null)
@@ -172,7 +179,7 @@ export getBrowser ffDefault gcDefault
 defaultRadio() {
   echo '<frame>
           <text><label>Default web browser</label></text>
-            <hbox homogeneous="true">
+            <hbox homogeneous="true" sensitive="'$chooseBrowser'">
 			<radiobutton>
                 <variable>defaultFF</variable>
                 <label>Firefox</label>

@@ -8,6 +8,8 @@ JustBrowsing Settings GUI configurator
 More information: http://goo.gl/mzbB5G (Tumblr)
 
 Recent:
+* Disable default if browsers missing
+* Disable printers if gutenprint missing
 * Save/load networks
 * Fix: Radio buttons
 * New: Set email provider
