@@ -8,7 +8,8 @@ fi
 
 if [ "$1" = "vbox-daemon" -a "$gpu" = "vbox" ]; then
   VBoxClient-all &
-  rm $HOME/.Xresources
+  rdp-cursors
+  #rm $HOME/.Xresources
 elif [ "$1" = "load" -a "$gpu" = "vbox" ]; then
   modprobe -a vboxguest vboxsf vboxvideo
   systemctl start vboxservice.service

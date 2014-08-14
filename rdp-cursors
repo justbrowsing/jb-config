@@ -1,0 +1,22 @@
+#!/bin/bash
+theme="Vanilla-DMZ-AA"
+backup="Adwaita"
+userDir="$HOME"
+
+cd "/usr/share/icons/$1/cursors" 2>/dev/null ||
+cd "/usr/share/icons/$theme/cursors" 2>/dev/null ||
+cd "/usr/share/icons/$backup/cursors" 2>/dev/null ||
+echo "No theme selected"
+
+md5=$(md5sum *)
+cursors=$(ls --color=none | grep -v "[[:digit:]][[:digit:]]")
+mkdir -p "$HOME/.icons/default/cursors"
+
+IFS=$(echo -en "\n\b")
+for image in $cursors; do
+  hash=$(echo "$md5" | grep " ${image}$" | awk NR==1 | awk '{print $1}')
+  echo "$PWD/$image : $HOME/.icons/default/cursors/$hash"
+  ln -s "$PWD/$image" "$HOME/.icons/default/cursors/$hash"
+done
+
+### END ###
