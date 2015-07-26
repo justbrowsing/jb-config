@@ -1,5 +1,6 @@
 #!/bin/bash
 config="/etc/justbrowsing/data/config"
+lockFile="/tmp/.setjb-mouse.lock"
 
 if [ ! -z "$1" ]; then
   mouse="$1"
@@ -11,6 +12,29 @@ if [ -f "$config" ]; then
   [ -z "$touchpad" ] && touchpad=$(grep ^touchpad "$config" 2>/dev/null | awk -F = '{print $NF}' | awk '{print $NF}')
 fi
 
+POINTER_TOGGLE()
+{
+  [ "$1" = "false" ] && action="disable"
+  [ "$1" = "true" ] && action="enable"
+  [ -z "$action" ] && action="enable"
+
+  touch "$lockFile"
+  [ "$action" = "disable" ] && unclutter -idle 0 &
+  while [ -f "$lockFile" ]; do
+    names=$(grep -B 4 mouse "/proc/bus/input/devices" | grep Name= | awk -F '"' '{print $2}' | grep -v "^HID ");
+    ids=$(xinput list | grep "$names" | grep -o "id=\S*" | awk -F = '{print $2}');
+
+    IFS=$(echo -en "\n\b");
+    for device in $ids; do
+      #echo "==> $device";
+      xinput --${action} "$device";
+    done
+    [ "$action" = "enable" ] && rm "$lockFile" && pkill unclutter
+    sleep 0.5
+
+  done;
+}
+
 synaptics=$(which synclient 2>/dev/null)
 
 if [ "$1" = "current" ]; then
@@ -19,6 +43,7 @@ elif [ "$1" = "tap" ]; then
   [ "$touchpad" = "enabletap" ] && echo "true" || echo "false"
 elif [ "$1" = "reset" ]; then
   [ ! -z "$synaptics" ] && synclient TapButton1=0 TapButton2=0 TapButton3=0
+  POINTER_TOGGLE true &
   xset m default
   sed -i '/^mouse/d' "$config"
   sed -i '/^touchpad/d' "$config"
@@ -29,6 +54,13 @@ elif [ "$touchpad" = "enabletap" ]; then
 elif [ "$touchpad" = "disabletap" ]; then
   [ ! -z "$synaptics" ] && synclient TapButton1=0 TapButton2=0 TapButton3=0
   sed -i '/^touchpad/d' "$config"
+elif [ "$mouse" = "true" ]; then
+  POINTER_TOGGLE true &
+  sed -i '/^mouse/d' "$config"
+elif [ "$mouse" = "false" ]; then
+  POINTER_TOGGLE false &
+  sed -i '/^mouse/d' "$config"
+  echo "mouse = ${mouse}" >> "$config"
 elif [ ! -z "$mouse" -a "$mouse" != "touchpad" ]; then
   [ "$2" = "gtk" ] && mouse=$(echo "$mouse" | awk '{print ($1*100)"/100"}');
   xset m "$mouse"

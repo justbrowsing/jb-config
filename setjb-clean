@@ -1,6 +1,6 @@
 #!/bin/bash
 
-userDir="/home/user"
+userDir="/home/jbuser"
 config="/etc/justbrowsing/data/config"
 ffDir="$HOME/.mozilla/firefox"
 ffProfile="oknp3n8p.default"
